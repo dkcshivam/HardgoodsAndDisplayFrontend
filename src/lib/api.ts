@@ -1,15 +1,5 @@
-/**
- * The single place where this app talks to Django.
- *
- * Every screen calls api.get / api.post / ... — never `fetch` directly.
- * That way, when we add auth headers or change the base URL, we change
- * one file instead of forty.
- */
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
-
-/** Thrown for any non-2xx response, carrying Django's error body. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -20,17 +10,17 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 
-  /**
-   * Django REST Framework returns validation errors as
-   * `{ style_no: ["This field must be unique."] }`.
-   * This pulls out the message for one field so a form can show it.
-   */
+  /** DRF returns `{ style_no: ["This field must be unique."] }`. */
   fieldError(field: string): string | undefined {
     if (typeof this.body !== "object" || this.body === null) return undefined;
     const value = (this.body as Record<string, unknown>)[field];
     if (Array.isArray(value)) return String(value[0]);
     if (typeof value === "string") return value;
     return undefined;
+  }
+
+  get detail(): string {
+    return this.fieldError("detail") ?? this.message;
   }
 }
 
@@ -45,7 +35,7 @@ async function request<T>(
     method,
     headers: isFormData ? undefined : { "Content-Type": "application/json" },
     body: isFormData ? body : body === undefined ? undefined : JSON.stringify(body),
-    credentials: "include", // send the session cookie once auth is added
+    credentials: "include",
   });
 
   if (response.status === 204) return undefined as T;
@@ -72,6 +62,17 @@ function safeJsonParse(text: string): unknown {
   }
 }
 
+/** Drops empty values so `?search=&status=` never reaches the API. */
+export function query(params: Record<string, string | number | boolean | undefined>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === "" || value === false) continue;
+    search.set(key, String(value));
+  }
+  const string = search.toString();
+  return string ? `?${string}` : "";
+}
+
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
@@ -80,10 +81,6 @@ export const api = {
   delete: <T>(path: string) => request<T>("DELETE", path),
 };
 
-/**
- * Django REST Framework wraps list endpoints in a pagination envelope.
- * Most list screens will receive this shape.
- */
 export interface Paginated<T> {
   count: number;
   next: string | null;

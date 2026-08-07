@@ -3,9 +3,6 @@ import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-// The typefaces used throughout the approved mockups.
-// next/font downloads and self-hosts these at build time — no request
-// ever goes to Google when a user loads the app.
 const plexSans = IBM_Plex_Sans({
   variable: "--font-plex-sans",
   subsets: ["latin"],

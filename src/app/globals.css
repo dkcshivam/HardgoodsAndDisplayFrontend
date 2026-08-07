@@ -3,16 +3,11 @@
 @import "shadcn/tailwind.css";
 
 /*
-  DKC Packing — design tokens.
-  Colours are lifted from the approved mockups (Packing App.dc.html).
-  Change a value here and it changes everywhere in the app.
-
-  This is a warehouse ops tool used under office lighting, so it ships
-  light-only. There is deliberately no .dark block.
+  Design tokens, lifted from the approved mockups. A warehouse ops tool used
+  under office lighting, so it ships light-only — no .dark block on purpose.
 */
 
 @theme inline {
-  /* Fonts — the CSS variables are defined by next/font in layout.tsx */
   --font-sans: var(--font-plex-sans);
   --font-mono: var(--font-plex-mono);
   --font-heading: var(--font-plex-sans);
@@ -154,11 +149,7 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
-  /*
-    Every number in this app is a measurement — style numbers, carton
-    numbers, weights, dimensions, CBM. Monospace keeps columns aligned
-    and makes a mistyped digit visible.
-  */
+  /* Monospace keeps measurement columns aligned and mistyped digits visible. */
   .tabular {
     @apply font-mono tabular-nums;
   }
