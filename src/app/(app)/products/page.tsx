@@ -72,20 +72,19 @@ export default function ProductsPage() {
                 <TH>Style No</TH>
                 <TH>Description</TH>
                 <TH>Category</TH>
-                <TH>Group</TH>
                 <TH>Packs as</TH>
                 <TH />
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={6}>
+                <EmptyRow colSpan={5}>
                   <span className="text-destructive">Could not load products.</span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={6}>
+                <EmptyRow colSpan={5}>
                   Nothing matches. Try clearing the filters.
                 </EmptyRow>
               )}
@@ -109,9 +108,6 @@ export default function ProductsPage() {
                   </TD>
                   <TD className="text-secondary-foreground">
                     {row.category_name || "—"}
-                  </TD>
-                  <TD className="text-secondary-foreground">
-                    {row.product_group_name || "—"}
                   </TD>
                   <TD>
                     {row.is_multi_part ? (

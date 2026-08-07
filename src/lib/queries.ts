@@ -8,13 +8,11 @@ import {
 } from "@tanstack/react-query";
 import { api, query, type Paginated } from "@/lib/api";
 import type {
-  BoxType,
   Category,
   Merchant,
   Order,
   PackingPlan,
   Product,
-  ProductGroup,
   ProductListItem,
 } from "@/types";
 
@@ -32,12 +30,8 @@ function useList<T>(
   });
 }
 
-export const useBoxTypes = (filters?: Filters) =>
-  useList<BoxType>("box-types", filters);
 export const useCategories = (filters?: Filters) =>
   useList<Category>("categories", filters);
-export const useProductGroups = (filters?: Filters) =>
-  useList<ProductGroup>("product-groups", filters);
 export const useMerchants = (filters?: Filters) =>
   useList<Merchant>("merchants", filters);
 export const useProducts = (filters?: Filters) =>

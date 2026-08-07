@@ -12,7 +12,6 @@ import {
 } from "@/components/products/pack-spec-fields";
 import { cn } from "@/lib/utils";
 import { grossWeight, format } from "@/lib/calc";
-import type { BoxType } from "@/types";
 
 export interface PartDraft extends PackSpecDraft {
   id?: number;
@@ -30,7 +29,6 @@ export interface PartDraft extends PackSpecDraft {
 export function PartCard({
   part,
   index,
-  boxTypes,
   onChange,
   onRemove,
   canRemove,
@@ -38,7 +36,6 @@ export function PartCard({
 }: {
   part: PartDraft;
   index: number;
-  boxTypes: BoxType[];
   onChange: (patch: Partial<PartDraft>) => void;
   onRemove: () => void;
   canRemove: boolean;
@@ -173,7 +170,6 @@ export function PartCard({
             <PackSpecFields
               value={part}
               onChange={onChange}
-              boxTypes={boxTypes}
               idPrefix={`part-${index}`}
             />
           </div>
@@ -193,7 +189,6 @@ export function blankPart(sortOrder: number): PartDraft {
     width_in: null,
     height_in: null,
     sort_order: sortOrder,
-    box_type: null,
     box_length_in: null,
     box_width_in: null,
     box_height_in: null,

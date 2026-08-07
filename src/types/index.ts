@@ -3,29 +3,10 @@
  * See ARCHITECTURE.md §5 for what each field means.
  */
 
-export interface BoxType {
-  id: number;
-  code: string;
-  name: string;
-  length_in: number;
-  width_in: number;
-  height_in: number;
-  max_weight_kg: number | null;
-  cbm: number;
-  is_active: boolean;
-}
-
 export interface Category {
   id: number;
   name: string;
   is_active: boolean;
-}
-
-export interface ProductGroup {
-  id: number;
-  name: string;
-  remark: string;
-  product_count: number;
 }
 
 export interface Merchant {
@@ -44,7 +25,6 @@ export type ProductStatus = "active" | "inactive";
 
 /** Repeats identically on a single-box product and on every part. */
 export interface PackSpec {
-  box_type: number | null;
   box_length_in: number | null;
   box_width_in: number | null;
   box_height_in: number | null;
@@ -87,8 +67,6 @@ export interface ProductListItem {
   description: string;
   category: number | null;
   category_name: string;
-  product_group: number | null;
-  product_group_name: string | null;
   is_multi_part: boolean;
   part_count: number;
   pack_per_box: number;
@@ -107,8 +85,6 @@ export interface Product extends Partial<PackSpec> {
   description: string;
   category: number | null;
   category_name: string;
-  product_group: number | null;
-  product_group_name: string | null;
 
   customs_description: string;
   hsn_code: string;
@@ -157,7 +133,6 @@ export interface OrderLine {
 export interface Carton {
   id: number;
   carton_no: string;
-  box_type: number | null;
   length_in: number | null;
   width_in: number | null;
   height_in: number | null;
@@ -192,7 +167,7 @@ export interface Reconciliation {
 export type BlockerCode =
   | "missing_carton_no"
   | "duplicate_carton_no"
-  | "missing_box_type"
+  | "missing_dimensions"
   | "gross_below_net"
   | "quantity_mismatch";
 

@@ -75,10 +75,25 @@ export function findBlockers(
       seen.set(number, (seen.get(number) ?? 0) + 1);
     }
 
-    if (!carton.box_type) {
+    // Dimensions drive CBM, which is what the shipping line bills against.
+    const missing = (
+      [
+        ["length", carton.length_in],
+        ["width", carton.width_in],
+        ["height", carton.height_in],
+      ] as const
+    )
+      .filter(([, value]) => !value)
+      .map(([name]) => name);
+
+    if (missing.length > 0) {
+      const named =
+        missing.length === 1
+          ? missing[0]
+          : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
       blockers.push({
-        code: "missing_box_type",
-        message: `Carton ${label} has no box type`,
+        code: "missing_dimensions",
+        message: `Carton ${label} is missing its ${named}`,
         carton_id: carton.id ?? null,
       });
     }

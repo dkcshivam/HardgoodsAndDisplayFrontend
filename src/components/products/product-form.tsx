@@ -20,13 +20,7 @@ import {
   blankPart,
   type PartDraft,
 } from "@/components/products/part-card";
-import {
-  useBoxTypes,
-  useCategories,
-  useProductGroups,
-  useRemove,
-  useSave,
-} from "@/lib/queries";
+import { useCategories, useRemove, useSave } from "@/lib/queries";
 import { format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import type { Product, ProductStatus } from "@/types";
@@ -36,7 +30,6 @@ export interface ProductDraft extends PackSpecDraft {
   style_no: string;
   description: string;
   category: number | null;
-  product_group: number | null;
   customs_description: string;
   hsn_code: string;
   is_multi_part: boolean;
@@ -54,7 +47,6 @@ export const BLANK_PRODUCT: ProductDraft = {
   style_no: "",
   description: "",
   category: null,
-  product_group: null,
   customs_description: "",
   hsn_code: "",
   is_multi_part: false,
@@ -75,7 +67,6 @@ export function toDraft(product: Product): ProductDraft {
     style_no: product.style_no,
     description: product.description,
     category: product.category,
-    product_group: product.product_group,
     customs_description: product.customs_description,
     hsn_code: product.hsn_code,
     is_multi_part: product.is_multi_part,
@@ -87,7 +78,6 @@ export function toDraft(product: Product): ProductDraft {
     assembled_weight_kg: product.assembled_weight_kg,
     pack_per_box: product.pack_per_box,
     parts: product.parts.map((part) => ({ ...part })),
-    box_type: product.box_type ?? null,
     box_length_in: product.box_length_in ?? null,
     box_width_in: product.box_width_in ?? null,
     box_height_in: product.box_height_in ?? null,
@@ -104,9 +94,7 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState(false);
 
-  const boxTypes = useBoxTypes({ is_active: true });
   const categories = useCategories({ is_active: true });
-  const groups = useProductGroups();
   const save = useSave<Record<string, unknown>>("products");
   const remove = useRemove("products");
 
@@ -170,14 +158,10 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
         if (error instanceof ApiError) {
           setErrors({
             style_no: error.fieldError("style_no") ?? "",
-            box_type: error.fieldError("box_type") ?? "",
             parts: error.fieldError("parts") ?? "",
           });
           toast.error(
-            error.fieldError("style_no") ??
-              error.fieldError("box_type") ??
-              error.fieldError("parts") ??
-              error.detail,
+            error.fieldError("style_no") ?? error.fieldError("parts") ?? error.detail,
           );
         } else {
           toast.error("Could not save");
@@ -250,38 +234,20 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               />
             </Field>
 
-            <FieldRow className="sm:grid-cols-2">
-              <Field label="Category">
-                <Select
-                  value={form.category ?? ""}
-                  onChange={(event) =>
-                    set({ category: toNumber(event.target.value) })
-                  }
-                >
-                  <option value="">None</option>
-                  {(categories.data?.results ?? []).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Product group">
-                <Select
-                  value={form.product_group ?? ""}
-                  onChange={(event) =>
-                    set({ product_group: toNumber(event.target.value) })
-                  }
-                >
-                  <option value="">None</option>
-                  {(groups.data?.results ?? []).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </FieldRow>
+            <Field label="Category">
+              <Select
+                value={form.category ?? ""}
+                onChange={(event) => set({ category: toNumber(event.target.value) })}
+                className="sm:w-64"
+              >
+                <option value="">None</option>
+                {(categories.data?.results ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
             <FieldRow className="sm:grid-cols-2">
               <Field label="Status">
@@ -384,12 +350,7 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 <CardTitle>The carton</CardTitle>
               </CardHeader>
               <CardBody>
-                <PackSpecFields
-                  value={form}
-                  onChange={set}
-                  boxTypes={boxTypes.data?.results ?? []}
-                  idPrefix="product"
-                />
+                <PackSpecFields value={form} onChange={set} idPrefix="product" />
               </CardBody>
             </Card>
           </>
@@ -473,7 +434,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                     key={index}
                     part={part}
                     index={index}
-                    boxTypes={boxTypes.data?.results ?? []}
                     defaultOpen={index === 0}
                     canRemove={form.parts.length > 2}
                     onChange={(patch) => setPart(index, patch)}

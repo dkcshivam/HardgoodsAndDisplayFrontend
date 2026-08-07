@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 
 const LABELS: Record<string, string> = {
-  "box-types": "Box Types",
-  "product-groups": "Product Groups",
   products: "Products",
   categories: "Categories",
   merchants: "Merchants",

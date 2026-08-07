@@ -5,20 +5,18 @@ import {
   AlertTriangle,
   ClipboardList,
   Package,
-  Ruler,
   TrendingUp,
 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
-import { useBoxTypes, useOrders, useProducts } from "@/lib/queries";
+import { useOrders, useProducts } from "@/lib/queries";
 import { format } from "@/lib/calc";
 
 export default function Dashboard() {
   const orders = useOrders({ ordering: "-created_at" });
   const products = useProducts();
-  const boxTypes = useBoxTypes({ is_active: true });
 
   const all = orders.data?.results ?? [];
   const needsPacking = all.filter(
@@ -33,7 +31,7 @@ export default function Dashboard() {
           description="What needs attention, and what has moved."
         />
 
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Stat
             label="Open orders"
             value={needsPacking.length}
@@ -45,12 +43,6 @@ export default function Dashboard() {
             value={products.data?.count ?? 0}
             icon={Package}
             href="/products"
-          />
-          <Stat
-            label="Box types"
-            value={boxTypes.data?.count ?? 0}
-            icon={Ruler}
-            href="/box-types"
           />
           <Stat
             label="Shipped"

@@ -6,17 +6,12 @@ import { AlertTriangle, ArrowRight, Plus, Trash2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
-import { Input, Select } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { ReconciliationBar } from "@/components/packing/reconciliation-bar";
-import {
-  useBoxTypes,
-  useOrder,
-  useOrderAction,
-  usePackingPlan,
-} from "@/lib/queries";
+import { useOrder, useOrderAction, usePackingPlan } from "@/lib/queries";
 import { api, ApiError } from "@/lib/api";
 import { cbm, format } from "@/lib/calc";
 import {
@@ -39,7 +34,6 @@ export default function PackingPage({
 
   const order = useOrder(orderId);
   const plan = usePackingPlan(orderId);
-  const boxTypes = useBoxTypes({ is_active: true });
   const { autoPack, savePacking, advance } = useOrderAction(orderId);
 
   const [cartons, setCartons] = useState<CartonDraft[]>([]);
@@ -103,28 +97,10 @@ export default function PackingPage({
     setDirty(true);
   };
 
-  const chooseBoxType = (index: number, value: string) => {
-    const type = (boxTypes.data?.results ?? []).find(
-      (item) => String(item.id) === value,
-    );
-    update(
-      index,
-      type
-        ? {
-            box_type: type.id,
-            length_in: type.length_in,
-            width_in: type.width_in,
-            height_in: type.height_in,
-          }
-        : { box_type: null },
-    );
-  };
-
   function save() {
     savePacking.mutate(
       cartons.map((carton, index) => ({
         carton_no: carton.carton_no,
-        box_type: carton.box_type,
         length_in: carton.length_in,
         width_in: carton.width_in,
         height_in: carton.height_in,
@@ -243,7 +219,6 @@ export default function PackingPage({
                 <tr>
                   <TH className="w-32">Carton No</TH>
                   <TH>Contents</TH>
-                  <TH className="w-40">Box type</TH>
                   <TH className="w-56 text-center">L × W × H (in)</TH>
                   <TH className="w-24 text-right">Qty</TH>
                   <TH className="w-28 text-right">Net (kg)</TH>
@@ -254,7 +229,7 @@ export default function PackingPage({
               </THead>
               <tbody>
                 {cartons.length === 0 && (
-                  <EmptyRow colSpan={9}>
+                  <EmptyRow colSpan={8}>
                     No cartons yet. Run auto-pack to propose a plan from the
                     ordered products.
                   </EmptyRow>
@@ -304,23 +279,6 @@ export default function PackingPage({
                         ))}
                       </TD>
                       <TD>
-                        <Select
-                          value={carton.box_type ?? ""}
-                          invalid={!carton.box_type}
-                          onChange={(event) =>
-                            chooseBoxType(index, event.target.value)
-                          }
-                          className="h-8"
-                        >
-                          <option value="">Choose…</option>
-                          {(boxTypes.data?.results ?? []).map((type) => (
-                            <option key={type.id} value={type.id}>
-                              {type.code}
-                            </option>
-                          ))}
-                        </Select>
-                      </TD>
-                      <TD>
                         <div className="flex items-center gap-1">
                           {(["length_in", "width_in", "height_in"] as const).map(
                             (key) => (
@@ -329,6 +287,7 @@ export default function PackingPage({
                                 type="number"
                                 step="0.01"
                                 value={carton[key] ?? ""}
+                                invalid={!carton[key]}
                                 onChange={(event) =>
                                   update(index, {
                                     [key]:
@@ -402,7 +361,6 @@ export default function PackingPage({
                     ...cartons,
                     {
                       carton_no: nextCartonNo(cartons),
-                      box_type: null,
                       length_in: null,
                       width_in: null,
                       height_in: null,

@@ -8,9 +8,7 @@ import {
   ChevronDown,
   ClipboardList,
   LayoutDashboard,
-  Layers,
   Package,
-  Ruler,
   Store,
   Tags,
   Sparkles,
@@ -41,9 +39,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Admin",
     items: [
-      { href: "/box-types", label: "Box Types", icon: Ruler },
       { href: "/categories", label: "Categories", icon: Tags },
-      { href: "/product-groups", label: "Product Groups", icon: Layers },
       { href: "/merchants", label: "Merchants", icon: Store },
     ],
   },
