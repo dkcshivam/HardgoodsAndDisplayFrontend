@@ -247,7 +247,7 @@ export default function PackingPage({
                   <TH className="w-56 text-center">L × W × H (in)</TH>
                   <TH className="w-24 text-right">Qty</TH>
                   <TH className="w-28 text-right">Net (kg)</TH>
-                  <TH className="w-28 text-right">Gross (kg)</TH>
+                  <TH className="w-32 text-right">Gross (kg)</TH>
                   <TH className="w-24 text-right">CBM</TH>
                   <TH className="w-12" />
                 </tr>
