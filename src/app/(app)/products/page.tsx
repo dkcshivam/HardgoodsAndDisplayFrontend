@@ -1,0 +1,145 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { Plus, ShieldAlert } from "lucide-react";
+import { PageHeader } from "@/components/shell/page-header";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
+import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
+import { useCategories, useProducts } from "@/lib/queries";
+
+export default function ProductsPage() {
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [status, setStatus] = useState("active");
+
+  const { data, isLoading, isError } = useProducts({ search, category, status });
+  const categories = useCategories({ is_active: true });
+  const rows = data?.results ?? [];
+
+  return (
+    <main className="flex-1 overflow-y-auto p-6">
+      <div className="mx-auto max-w-6xl space-y-5">
+        <PageHeader
+          title="Products"
+          description="Packing recipes. Describe an item once and it packs correctly forever."
+          actions={
+            <Button size="sm" asChild>
+              <Link href="/products/new">
+                <Plus /> New product
+              </Link>
+            </Button>
+          }
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search style no, description, HSN…"
+          />
+          <Select
+            className="w-40"
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+          >
+            <option value="">All categories</option>
+            {(categories.data?.results ?? []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            className="w-32"
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="">All</option>
+          </Select>
+        </div>
+
+        <Card>
+          <Table>
+            <THead>
+              <tr>
+                <TH>Style No</TH>
+                <TH>Description</TH>
+                <TH>Category</TH>
+                <TH>Group</TH>
+                <TH>Packs as</TH>
+                <TH />
+              </tr>
+            </THead>
+            <tbody>
+              {isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
+              {isError && (
+                <EmptyRow colSpan={6}>
+                  <span className="text-destructive">Could not load products.</span>
+                </EmptyRow>
+              )}
+              {!isLoading && rows.length === 0 && (
+                <EmptyRow colSpan={6}>
+                  Nothing matches. Try clearing the filters.
+                </EmptyRow>
+              )}
+              {rows.map((row) => (
+                <TR key={row.id}>
+                  <TD>
+                    <Link
+                      href={`/products/${row.id}`}
+                      className="tabular font-medium hover:text-primary"
+                    >
+                      {row.style_no}
+                    </Link>
+                  </TD>
+                  <TD>
+                    <span className="inline-flex items-center gap-1.5">
+                      {row.description}
+                      {row.is_fragile && (
+                        <ShieldAlert className="size-3.5 text-warning" />
+                      )}
+                    </span>
+                  </TD>
+                  <TD className="text-secondary-foreground">
+                    {row.category_name || "—"}
+                  </TD>
+                  <TD className="text-secondary-foreground">
+                    {row.product_group_name || "—"}
+                  </TD>
+                  <TD>
+                    {row.is_multi_part ? (
+                      <Badge tone="info">{row.part_count} parts</Badge>
+                    ) : (
+                      <Badge>{row.pack_per_box} per box</Badge>
+                    )}
+                  </TD>
+                  <TD className="text-right">
+                    <Link
+                      href={`/products/${row.id}`}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Edit
+                    </Link>
+                  </TD>
+                </TR>
+              ))}
+            </tbody>
+          </Table>
+        </Card>
+
+        {data && (
+          <p className="text-xs text-muted-foreground">
+            {rows.length} of {data.count} products
+          </p>
+        )}
+      </div>
+    </main>
+  );
+}
