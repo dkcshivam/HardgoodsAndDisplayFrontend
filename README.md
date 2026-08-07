@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DKC Packing — Frontend
 
-## Getting Started
+Next.js 16 + React 19 + Tailwind v4. The screens.
 
-First, run the development server:
+The API is a separate repo: `HardgoodsAndDisplayBackend`.
+**Start that one first**, or every screen shows "Could not reach the API".
+
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# terminal 1 — in HardgoodsAndDisplayBackend
+docker compose up -d
+
+# terminal 2 — here
+docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Stop with `docker compose down`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Everyday commands
 
-## Learn More
+```bash
+docker compose logs -f frontend    # watch for compile errors
+docker compose restart frontend    # REQUIRED after adding a new page file
+npm run lint                       # must pass before committing
+npm run typecheck                  # must pass before committing
+```
 
-To learn more about Next.js, take a look at the following resources:
+**Adding a new page file needs a restart.** Turbopack does not notice new files
+across the Windows bind mount. Editing an existing file hot-reloads normally.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## What is where
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Path | What it holds |
+|---|---|
+| `src/app/(app)/` | One folder per screen. `(app)` wraps them in the sidebar shell. |
+| `src/components/ui/` | Buttons, inputs, tables, dialogs — the small reusable pieces |
+| `src/lib/api.ts` | The only place this app calls `fetch` |
+| `src/lib/queries.ts` | Every data-loading hook |
+| `src/lib/calc.ts` | Mirror of the backend's maths, for live form feedback |
+| `src/lib/packing.ts` | Mirror of reconciliation and blocker rules |
+| `src/types/index.ts` | The shapes the API sends, field for field |
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The mirrors in `calc.ts` and `packing.ts` exist so a form can answer instantly
+while someone types. **The server re-runs both on save and wins.**

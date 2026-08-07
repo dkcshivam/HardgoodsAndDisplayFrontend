@@ -1,0 +1,19 @@
+name: dkc-packing-frontend
+
+# The API lives in the HardgoodsAndDisplayBackend repo. Start that first —
+# this talks to it from the browser, over the published port on localhost.
+
+services:
+  frontend:
+    build:
+      context: .
+      target: dev
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
