@@ -1,0 +1,165 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+  DKC Packing — design tokens.
+  Colours are lifted from the approved mockups (Packing App.dc.html).
+  Change a value here and it changes everywhere in the app.
+
+  This is a warehouse ops tool used under office lighting, so it ships
+  light-only. There is deliberately no .dark block.
+*/
+
+@theme inline {
+  /* Fonts — the CSS variables are defined by next/font in layout.tsx */
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
+  --font-heading: var(--font-plex-sans);
+
+  /* Surfaces */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  /* Brand */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-subtle: var(--primary-subtle);
+
+  /* Neutrals */
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  /* Lines */
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Feedback — used by blockers, reconciliation chips, toasts */
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-destructive-border: var(--destructive-border);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+
+  /* Order status badges: draft -> packing -> packed -> shipped */
+  --color-status-draft: var(--status-draft);
+  --color-status-draft-bg: var(--status-draft-bg);
+  --color-status-packing: var(--status-packing);
+  --color-status-packing-bg: var(--status-packing-bg);
+  --color-status-packed: var(--status-packed);
+  --color-status-packed-bg: var(--status-packed-bg);
+  --color-status-shipped: var(--status-shipped);
+  --color-status-shipped-bg: var(--status-shipped-bg);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.125);
+  --radius-xl: calc(var(--radius) * 1.375);
+  --radius-2xl: calc(var(--radius) * 1.625);
+}
+
+:root {
+  /* Surfaces */
+  --background: #f6f7f9; /* page */
+  --foreground: #1b1f27; /* primary text */
+  --card: #ffffff; /* panels, tables, form sections */
+  --card-foreground: #1b1f27;
+  --popover: #ffffff;
+  --popover-foreground: #1b1f27;
+
+  /* Brand */
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --primary-hover: #4338ca;
+  --primary-subtle: #eef1ff; /* focus rings, selected nav item */
+
+  /* Neutrals */
+  --secondary: #f2f3f6;
+  --secondary-foreground: #59606d;
+  --muted: #f2f3f6;
+  --muted-foreground: #8891a0; /* labels, hints, placeholders */
+  --accent: #f0f1f5; /* hover background */
+  --accent-foreground: #1b1f27;
+
+  /* Lines */
+  --border: #e7e9ee; /* panel edges */
+  --border-subtle: #eceef2; /* table row dividers */
+  --input: #e2e5ea; /* form field edges */
+  --ring: #4f46e5;
+
+  /* Feedback */
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --destructive-subtle: #fef2f2; /* invalid cell background */
+  --destructive-border: #f0a5a5; /* invalid cell border */
+  --success: #16a34a;
+  --success-subtle: #e6f6ec;
+  --warning: #b45309;
+  --warning-subtle: #fef4e6;
+
+  /* Order status */
+  --status-draft: #5b6472;
+  --status-draft-bg: #eef0f3;
+  --status-packing: #b26a00;
+  --status-packing-bg: #fef4e6;
+  --status-packed: #1d4ed8;
+  --status-packed-bg: #e6efff;
+  --status-shipped: #15803d;
+  --status-shipped-bg: #e6f6ec;
+
+  /* Sidebar */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1b1f27;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f1f5;
+  --sidebar-accent-foreground: #1b1f27;
+  --sidebar-border: #eceef2;
+  --sidebar-ring: #4f46e5;
+
+  --radius: 0.5rem; /* 8px — inputs and buttons */
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  /*
+    Every number in this app is a measurement — style numbers, carton
+    numbers, weights, dimensions, CBM. Monospace keeps columns aligned
+    and makes a mistyped digit visible.
+  */
+  .tabular {
+    @apply font-mono tabular-nums;
+  }
+}
