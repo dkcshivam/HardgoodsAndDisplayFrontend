@@ -1,0 +1,516 @@
+"use client";
+
+import { use, useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
+import { AlertTriangle, ArrowRight, Plus, Trash2, Wand2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
+import { Input, Select } from "@/components/ui/input";
+import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/ui/confirm";
+import { useToast } from "@/components/ui/toast";
+import { ReconciliationBar } from "@/components/packing/reconciliation-bar";
+import {
+  useBoxTypes,
+  useOrder,
+  useOrderAction,
+  usePackingPlan,
+} from "@/lib/queries";
+import { api, ApiError } from "@/lib/api";
+import { cbm, format } from "@/lib/calc";
+import {
+  cartonNetWeight,
+  findBlockers,
+  nextCartonNo,
+  reconcile,
+  type CartonDraft,
+} from "@/lib/packing";
+import type { Product } from "@/types";
+
+export default function PackingPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const orderId = Number(id);
+  const toast = useToast();
+
+  const order = useOrder(orderId);
+  const plan = usePackingPlan(orderId);
+  const boxTypes = useBoxTypes({ is_active: true });
+  const { autoPack, savePacking, advance } = useOrderAction(orderId);
+
+  const [cartons, setCartons] = useState<CartonDraft[]>([]);
+  const [dirty, setDirty] = useState(false);
+  const [confirmAutoPack, setConfirmAutoPack] = useState(false);
+
+  // Reconciliation needs each ordered product's parts, which the order
+  // payload does not carry.
+  const productQueries = useQueries({
+    queries: (order.data?.lines ?? []).map((line) => ({
+      queryKey: ["products", line.product],
+      queryFn: () => api.get<Product>(`/products/${line.product}/`),
+    })),
+  });
+
+  const products = useMemo(() => {
+    const map = new Map<number, Product>();
+    for (const result of productQueries) {
+      if (result.data) map.set(result.data.id, result.data);
+    }
+    return map;
+  }, [productQueries]);
+
+  // Reset the editable copy whenever the server sends a new plan.
+  const [loaded, setLoaded] = useState(plan.data?.cartons);
+  if (plan.data && plan.data.cartons !== loaded) {
+    setLoaded(plan.data.cartons);
+    setCartons(plan.data.cartons.map((carton) => ({ ...carton })));
+    setDirty(false);
+  }
+
+  const reconciliation = useMemo(
+    () => reconcile(order.data?.lines ?? [], cartons, products),
+    [order.data?.lines, cartons, products],
+  );
+  const blockers = useMemo(
+    () => findBlockers(cartons, reconciliation),
+    [cartons, reconciliation],
+  );
+
+  const totals = useMemo(
+    () => ({
+      quantity: cartons.reduce(
+        (sum, carton) =>
+          sum + carton.contents.reduce((n, c) => n + c.quantity, 0),
+        0,
+      ),
+      gross: cartons.reduce((sum, c) => sum + (c.gross_weight_kg ?? 0), 0),
+      volume: cartons.reduce(
+        (sum, c) => sum + cbm(c.length_in, c.width_in, c.height_in),
+        0,
+      ),
+    }),
+    [cartons],
+  );
+
+  const update = (index: number, patch: Partial<CartonDraft>) => {
+    setCartons((all) =>
+      all.map((carton, i) => (i === index ? { ...carton, ...patch } : carton)),
+    );
+    setDirty(true);
+  };
+
+  const chooseBoxType = (index: number, value: string) => {
+    const type = (boxTypes.data?.results ?? []).find(
+      (item) => String(item.id) === value,
+    );
+    update(
+      index,
+      type
+        ? {
+            box_type: type.id,
+            length_in: type.length_in,
+            width_in: type.width_in,
+            height_in: type.height_in,
+          }
+        : { box_type: null },
+    );
+  };
+
+  function save() {
+    savePacking.mutate(
+      cartons.map((carton, index) => ({
+        carton_no: carton.carton_no,
+        box_type: carton.box_type,
+        length_in: carton.length_in,
+        width_in: carton.width_in,
+        height_in: carton.height_in,
+        gross_weight_kg: carton.gross_weight_kg,
+        sort_order: index,
+        contents: carton.contents.map((content) => ({
+          product: content.product,
+          part: content.part,
+          description: content.description,
+          quantity: content.quantity,
+          unit: content.unit,
+          net_weight_kg: content.net_weight_kg,
+        })),
+      })),
+      {
+        onSuccess: () => {
+          toast.success("Packing plan saved");
+          setDirty(false);
+          plan.refetch();
+          order.refetch();
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof ApiError ? error.detail : "Could not save the plan",
+          ),
+      },
+    );
+  }
+
+  if (order.isLoading || plan.isLoading) {
+    return (
+      <main className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+        Loading packing plan…
+      </main>
+    );
+  }
+
+  if (order.isError || !order.data) {
+    return (
+      <main className="flex flex-1 items-center justify-center text-sm text-destructive">
+        Could not load this order.
+      </main>
+    );
+  }
+
+  const canSave = blockers.length === 0 && cartons.length > 0;
+
+  return (
+    <>
+      <main className="flex-1 overflow-y-auto p-6">
+        <div className="mx-auto max-w-7xl space-y-5 pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="tabular text-xl font-semibold tracking-tight">
+                  {order.data.number}
+                </h1>
+                <StatusBadge status={order.data.status} />
+              </div>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {order.data.name} · {order.data.merchant_name}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  cartons.length > 0 ? setConfirmAutoPack(true) : runAutoPack()
+                }
+                disabled={autoPack.isPending}
+              >
+                <Wand2 /> {autoPack.isPending ? "Packing…" : "Auto-pack"}
+              </Button>
+              {order.data.status === "packed" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    advance.mutate(undefined, {
+                      onSuccess: () => toast.success("Marked shipped"),
+                      onError: () => toast.error("Could not advance"),
+                    })
+                  }
+                >
+                  Mark shipped <ArrowRight />
+                </Button>
+              )}
+              {order.data.status === "packing" && (
+                <Button
+                  size="sm"
+                  disabled={!canSave || dirty}
+                  onClick={() =>
+                    advance.mutate(undefined, {
+                      onSuccess: () => toast.success("Marked packed"),
+                      onError: (error) =>
+                        toast.error(
+                          error instanceof ApiError
+                            ? error.detail
+                            : "Resolve packing first",
+                        ),
+                    })
+                  }
+                >
+                  Mark packed <ArrowRight />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <ReconciliationBar rows={reconciliation} />
+
+          <Card>
+            <Table>
+              <THead>
+                <tr>
+                  <TH className="w-32">Carton No</TH>
+                  <TH>Contents</TH>
+                  <TH className="w-40">Box type</TH>
+                  <TH className="w-56 text-center">L × W × H (in)</TH>
+                  <TH className="w-24 text-right">Qty</TH>
+                  <TH className="w-28 text-right">Net (kg)</TH>
+                  <TH className="w-28 text-right">Gross (kg)</TH>
+                  <TH className="w-24 text-right">CBM</TH>
+                  <TH className="w-12" />
+                </tr>
+              </THead>
+              <tbody>
+                {cartons.length === 0 && (
+                  <EmptyRow colSpan={9}>
+                    No cartons yet. Run auto-pack to propose a plan from the
+                    ordered products.
+                  </EmptyRow>
+                )}
+                {cartons.map((carton, index) => {
+                  const net = cartonNetWeight(carton);
+                  const gross = carton.gross_weight_kg ?? 0;
+                  const quantity = carton.contents.reduce(
+                    (sum, content) => sum + content.quantity,
+                    0,
+                  );
+                  const duplicate =
+                    cartons.filter(
+                      (other) =>
+                        (other.carton_no ?? "").trim() ===
+                        (carton.carton_no ?? "").trim(),
+                    ).length > 1;
+
+                  return (
+                    <TR key={carton.id ?? `new-${index}`}>
+                      <TD>
+                        <Input
+                          value={carton.carton_no}
+                          invalid={!carton.carton_no.trim() || duplicate}
+                          onChange={(event) =>
+                            update(index, { carton_no: event.target.value })
+                          }
+                          className="tabular h-8"
+                        />
+                      </TD>
+                      <TD>
+                        {carton.contents.map((content, contentIndex) => (
+                          <div
+                            key={contentIndex}
+                            className="text-xs leading-relaxed"
+                          >
+                            <span className="tabular font-medium">
+                              {content.product_style_no}
+                            </span>
+                            {content.part_name && (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                — {content.part_name}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </TD>
+                      <TD>
+                        <Select
+                          value={carton.box_type ?? ""}
+                          invalid={!carton.box_type}
+                          onChange={(event) =>
+                            chooseBoxType(index, event.target.value)
+                          }
+                          className="h-8"
+                        >
+                          <option value="">Choose…</option>
+                          {(boxTypes.data?.results ?? []).map((type) => (
+                            <option key={type.id} value={type.id}>
+                              {type.code}
+                            </option>
+                          ))}
+                        </Select>
+                      </TD>
+                      <TD>
+                        <div className="flex items-center gap-1">
+                          {(["length_in", "width_in", "height_in"] as const).map(
+                            (key) => (
+                              <Input
+                                key={key}
+                                type="number"
+                                step="0.01"
+                                value={carton[key] ?? ""}
+                                onChange={(event) =>
+                                  update(index, {
+                                    [key]:
+                                      event.target.value === ""
+                                        ? null
+                                        : Number(event.target.value),
+                                  })
+                                }
+                                className="tabular h-8 px-1.5 text-center"
+                              />
+                            ),
+                          )}
+                        </div>
+                      </TD>
+                      <TD className="tabular text-right">{quantity}</TD>
+                      <TD className="tabular text-right text-secondary-foreground">
+                        {format.weight(net)}
+                      </TD>
+                      <TD>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          value={carton.gross_weight_kg ?? ""}
+                          invalid={gross < net}
+                          onChange={(event) =>
+                            update(index, {
+                              gross_weight_kg:
+                                event.target.value === ""
+                                  ? null
+                                  : Number(event.target.value),
+                            })
+                          }
+                          className="tabular h-8 text-right"
+                        />
+                      </TD>
+                      <TD className="tabular text-right text-secondary-foreground">
+                        {format.cbm(
+                          cbm(carton.length_in, carton.width_in, carton.height_in),
+                        )}
+                      </TD>
+                      <TD>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive-subtle"
+                          onClick={() => {
+                            setCartons(cartons.filter((_, i) => i !== index));
+                            setDirty(true);
+                          }}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </TD>
+                    </TR>
+                  );
+                })}
+              </tbody>
+            </Table>
+
+            <div className="border-t border-border-subtle px-4 py-2.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const line = order.data.lines[0];
+                  if (!line) {
+                    toast.error("This order has no products.");
+                    return;
+                  }
+                  setCartons([
+                    ...cartons,
+                    {
+                      carton_no: nextCartonNo(cartons),
+                      box_type: null,
+                      length_in: null,
+                      width_in: null,
+                      height_in: null,
+                      gross_weight_kg: null,
+                      sort_order: cartons.length,
+                      contents: [
+                        {
+                          id: 0,
+                          product: line.product,
+                          product_style_no: line.product_style_no,
+                          part: null,
+                          part_name: null,
+                          description: line.product_description,
+                          quantity: 1,
+                          unit: "pcs",
+                          net_weight_kg: 0,
+                        },
+                      ],
+                    },
+                  ]);
+                  setDirty(true);
+                }}
+              >
+                <Plus /> Add carton
+              </Button>
+            </div>
+          </Card>
+
+          {blockers.length > 0 && (
+            <Card className="border-destructive-border bg-destructive-subtle">
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                  <AlertTriangle className="size-4" />
+                  {blockers.length}{" "}
+                  {blockers.length === 1 ? "blocker" : "blockers"}
+                </div>
+                <ul className="mt-2 space-y-1 text-xs text-destructive">
+                  {blockers.map((blocker, index) => (
+                    <li key={index}>• {blocker.message}</li>
+                  ))}
+                </ul>
+              </div>
+            </Card>
+          )}
+        </div>
+      </main>
+
+      {/* A layout sibling of the scroll area, not page content. */}
+      <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-card px-6 py-3">
+        <div className="flex flex-wrap items-center gap-5 text-sm">
+          <Total label="Cartons" value={String(cartons.length)} />
+          <Total label="Quantity" value={String(totals.quantity)} />
+          <Total label="Gross" value={`${format.weight(totals.gross)} kg`} />
+          <Total label="Volume" value={`${format.cbm(totals.volume)} CBM`} />
+        </div>
+        <div className="flex items-center gap-3">
+          {!canSave && cartons.length > 0 && (
+            <span className="text-xs text-destructive">
+              {blockers.length} to resolve
+            </span>
+          )}
+          {dirty && canSave && (
+            <span className="text-xs text-muted-foreground">Unsaved changes</span>
+          )}
+          <Button
+            onClick={save}
+            disabled={!canSave || savePacking.isPending}
+          >
+            {savePacking.isPending ? "Saving…" : "Save packing plan"}
+          </Button>
+        </div>
+      </footer>
+
+      <ConfirmDialog
+        open={confirmAutoPack}
+        onOpenChange={setConfirmAutoPack}
+        title="Replace the current plan?"
+        message="Auto-pack rebuilds every carton from the ordered products' recipes. Edits made here will be lost."
+        confirmLabel="Replace"
+        busy={autoPack.isPending}
+        onConfirm={() => {
+          runAutoPack();
+          setConfirmAutoPack(false);
+        }}
+      />
+    </>
+  );
+
+  function runAutoPack() {
+    autoPack.mutate(undefined, {
+      onSuccess: () => {
+        toast.success("Plan proposed. Every value stays editable.");
+        plan.refetch();
+        order.refetch();
+      },
+      onError: (error) =>
+        toast.error(
+          error instanceof ApiError ? error.detail : "Could not auto-pack",
+        ),
+    });
+  }
+}
+
+function Total({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="tabular ml-1.5 font-semibold">{value}</span>
+    </div>
+  );
+}
