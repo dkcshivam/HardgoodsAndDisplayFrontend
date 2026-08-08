@@ -17,8 +17,11 @@ import type { ShippingAddress } from "@/types";
 
 interface LineDraft {
   product: number | null;
+  color: string;
   quantity: number;
 }
+
+const BLANK_LINE: LineDraft = { product: null, color: "", quantity: 1 };
 
 const BLANK_ADDRESS: ShippingAddress = {
   country: "US",
@@ -37,9 +40,7 @@ export default function NewOrderPage() {
   const [merchant, setMerchant] = useState<number | null>(null);
   const [buyerName, setBuyerName] = useState("");
   const [address, setAddress] = useState<ShippingAddress>(BLANK_ADDRESS);
-  const [lines, setLines] = useState<LineDraft[]>([
-    { product: null, quantity: 1 },
-  ]);
+  const [lines, setLines] = useState<LineDraft[]>([BLANK_LINE]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const merchants = useMerchants({ is_active: true });
@@ -78,6 +79,7 @@ export default function NewOrderPage() {
         shipping_address: address,
         lines: filled.map((line) => ({
           product: line.product,
+          color: line.color.trim(),
           quantity: line.quantity,
         })),
       },
@@ -231,7 +233,7 @@ export default function NewOrderPage() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setLines([...lines, { product: null, quantity: 1 }])}
+              onClick={() => setLines([...lines, BLANK_LINE])}
             >
               <Plus /> Add line
             </Button>
@@ -240,6 +242,7 @@ export default function NewOrderPage() {
             <THead>
               <tr>
                 <TH>Product</TH>
+                <TH className="w-44">Colour</TH>
                 <TH className="w-28 text-right">Quantity</TH>
                 <TH className="w-32 text-right">Cartons</TH>
                 <TH className="w-12" />
@@ -247,7 +250,7 @@ export default function NewOrderPage() {
             </THead>
             <tbody>
               {lines.length === 0 && (
-                <EmptyRow colSpan={4}>No lines yet.</EmptyRow>
+                <EmptyRow colSpan={5}>No lines yet.</EmptyRow>
               )}
               {lines.map((line, index) => {
                 const product = catalogue.find((item) => item.id === line.product);
@@ -276,6 +279,15 @@ export default function NewOrderPage() {
                           </option>
                         ))}
                       </Select>
+                    </TD>
+                    <TD>
+                      <Input
+                        value={line.color}
+                        onChange={(event) =>
+                          setLine(index, { color: event.target.value })
+                        }
+                        placeholder="Natural Oak"
+                      />
                     </TD>
                     <TD>
                       <Input
@@ -311,6 +323,8 @@ export default function NewOrderPage() {
             </tbody>
           </Table>
           <CardBody className="border-t border-border-subtle bg-secondary/30 text-xs text-muted-foreground">
+            Colour is recorded per order — the same style ships in whatever
+            finish this merchant asked for, and it prints on the packing list.
             Auto-pack will propose about{" "}
             <span className="tabular font-semibold text-foreground">
               {estimatedCartons}

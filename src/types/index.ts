@@ -130,6 +130,8 @@ export interface OrderLine {
   product: number;
   product_style_no: string;
   product_description: string;
+  /** Set per order: the same SKU ships in whatever finish was asked for. */
+  color: string;
   quantity: number;
 }
 

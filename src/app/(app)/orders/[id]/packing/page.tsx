@@ -74,6 +74,14 @@ export default function PackingPage({
     [cartons, reconciliation],
   );
 
+  // Colour is recorded on the order line, so the packed rows read it back
+  // through the product they hold.
+  const colorOf = useMemo(
+    () =>
+      new Map((order.data?.lines ?? []).map((line) => [line.product, line.color])),
+    [order.data?.lines],
+  );
+
   const totals = useMemo(
     () => ({
       quantity: cartons.reduce(
@@ -273,6 +281,11 @@ export default function PackingPage({
                               <span className="text-muted-foreground">
                                 {" "}
                                 — {content.part_name}
+                              </span>
+                            )}
+                            {colorOf.get(content.product) && (
+                              <span className="ml-1.5 rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground">
+                                {colorOf.get(content.product)}
                               </span>
                             )}
                           </div>
