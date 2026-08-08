@@ -10,8 +10,14 @@ import {
   toNumber,
   type PackSpecDraft,
 } from "@/components/products/pack-spec-fields";
+import {
+  PhotoGallery,
+  type PendingPhoto,
+  type PhotoBinding,
+} from "@/components/products/photo-gallery";
 import { cn } from "@/lib/utils";
 import { grossWeight, format } from "@/lib/calc";
+import type { ProductImage } from "@/types";
 
 export interface PartDraft extends PackSpecDraft {
   id?: number;
@@ -23,12 +29,15 @@ export interface PartDraft extends PackSpecDraft {
   width_in: number | null;
   height_in: number | null;
   sort_order: number;
+  images: ProductImage[];
+  pending_images: PendingPhoto[];
 }
 
 /** Expands in place — never a dense table, never a page per part. */
 export function PartCard({
   part,
   index,
+  photos,
   onChange,
   onRemove,
   canRemove,
@@ -36,6 +45,7 @@ export function PartCard({
 }: {
   part: PartDraft;
   index: number;
+  photos: PhotoBinding;
   onChange: (patch: Partial<PartDraft>) => void;
   onRemove: () => void;
   canRemove: boolean;
@@ -127,6 +137,16 @@ export function PartCard({
 
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Photos of this part
+            </div>
+            <PhotoGallery
+              {...photos}
+              emptyHint="A photo of the boxed part tells the packer what to look for."
+            />
+          </div>
+
+          <div>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               The part itself
             </div>
             <FieldRow>
@@ -171,6 +191,7 @@ export function PartCard({
               value={part}
               onChange={onChange}
               idPrefix={`part-${index}`}
+              subject="part"
             />
           </div>
         </div>
@@ -189,6 +210,8 @@ export function blankPart(sortOrder: number): PartDraft {
     width_in: null,
     height_in: null,
     sort_order: sortOrder,
+    images: [],
+    pending_images: [],
     box_length_in: null,
     box_width_in: null,
     box_height_in: null,

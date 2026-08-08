@@ -25,15 +25,20 @@ export const BLANK_PACK_SPEC: PackSpecDraft = {
 /**
  * The box-and-weight block, identical on a single-box product and on every
  * part. Weights each get their own row; dimensions share one.
+ *
+ * `subject` only names what is being weighed — inside a part card the same
+ * column is the weight of that part, not of the whole product.
  */
 export function PackSpecFields({
   value,
   onChange,
   idPrefix,
+  subject = "product",
 }: {
   value: PackSpecDraft;
   onChange: (patch: Partial<PackSpecDraft>) => void;
   idPrefix: string;
+  subject?: "product" | "part";
 }) {
   const net = netWeight(value.product_weight_kg, value.packing_material_weight_kg);
   const gross = grossWeight(
@@ -81,7 +86,14 @@ export function PackSpecFields({
         </Field>
       </FieldRow>
 
-      <Field label="Product weight (kg)" hint="The bare item with no packaging.">
+      <Field
+        label={subject === "part" ? "Part weight (kg)" : "Product weight (kg)"}
+        hint={
+          subject === "part"
+            ? "The bare part with no packaging."
+            : "The bare item with no packaging."
+        }
+      >
         <Input
           type="number"
           step="0.001"
