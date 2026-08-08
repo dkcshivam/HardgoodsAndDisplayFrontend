@@ -37,7 +37,8 @@ across the Windows bind mount. Editing an existing file hot-reloads normally.
 |---|---|
 | `src/app/(app)/` | One folder per screen. `(app)` wraps them in the sidebar shell. |
 | `src/components/ui/` | Buttons, inputs, tables, dialogs — the small reusable pieces |
-| `src/lib/api.ts` | The only place this app calls `fetch` |
+| `src/components/products/photo-gallery.tsx` | Photo grid, file picker and the in-app camera |
+| `src/lib/api.ts` | The only place this app calls `fetch` — including file downloads |
 | `src/lib/queries.ts` | Every data-loading hook |
 | `src/lib/calc.ts` | Mirror of the backend's maths, for live form feedback |
 | `src/lib/packing.ts` | Mirror of reconciliation and blocker rules |
@@ -45,3 +46,14 @@ across the Windows bind mount. Editing an existing file hot-reloads normally.
 
 The mirrors in `calc.ts` and `packing.ts` exist so a form can answer instantly
 while someone types. **The server re-runs both on save and wins.**
+
+## Two things that need the real device
+
+**The camera** in the product form uses `getUserMedia`, which browsers only
+grant over HTTPS or on `localhost`. Reaching the dev server by LAN IP from a
+phone will show the "no camera" message; the file picker still works, and on a
+phone that offers the camera anyway.
+
+**Photo URLs** come back absolute from Django (`http://localhost:8000/media/...`).
+They are plain `<img>` tags rather than `next/image`, so no host has to be
+declared up front when the media store moves.
