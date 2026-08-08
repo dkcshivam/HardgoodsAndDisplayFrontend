@@ -38,8 +38,11 @@ export interface PackSpec {
   cbm: number;
 }
 
+/** Exactly one of `product` and `part` is set. */
 export interface ProductImage {
   id: number;
+  product: number | null;
+  part: number | null;
   image: string;
   is_main: boolean;
   sort_order: number;

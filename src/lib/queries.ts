@@ -13,6 +13,7 @@ import type {
   Order,
   PackingPlan,
   Product,
+  ProductImage,
   ProductListItem,
 } from "@/types";
 
@@ -60,16 +61,59 @@ export const usePackingPlan = (orderId: number) =>
 /**
  * Create/update/delete for one resource. Every mutation invalidates the
  * resource's whole key, so lists and detail views refresh together.
+ *
+ * `R` splits the saved shape from the sent one — a form sends a draft and
+ * gets the full record back.
  */
-export function useSave<T extends { id?: number }>(resource: string) {
+export function useSave<T extends { id?: number }, R = T>(resource: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (record: T) =>
       record.id
-        ? api.put<T>(`/${resource}/${record.id}/`, record)
-        : api.post<T>(`/${resource}/`, record),
+        ? api.put<R>(`/${resource}/${record.id}/`, record)
+        : api.post<R>(`/${resource}/`, record),
     onSuccess: () => client.invalidateQueries({ queryKey: [resource] }),
   });
+}
+
+/**
+ * Photos upload one file at a time as multipart, against an owner that
+ * already exists — a product or part needs an id before a file can point at
+ * it. The product form queues them until then.
+ */
+export function usePhotoActions() {
+  const client = useQueryClient();
+  const refresh = () => client.invalidateQueries({ queryKey: ["products"] });
+
+  return {
+    upload: useMutation({
+      mutationFn: ({
+        file,
+        product,
+        part,
+      }: {
+        file: File;
+        product?: number;
+        part?: number;
+      }) => {
+        const body = new FormData();
+        body.append("image", file);
+        if (product) body.append("product", String(product));
+        if (part) body.append("part", String(part));
+        return api.post<ProductImage>("/product-images/", body);
+      },
+      onSuccess: refresh,
+    }),
+    remove: useMutation({
+      mutationFn: (id: number) => api.delete<void>(`/product-images/${id}/`),
+      onSuccess: refresh,
+    }),
+    setMain: useMutation({
+      mutationFn: (id: number) =>
+        api.patch<ProductImage>(`/product-images/${id}/`, { is_main: true }),
+      onSuccess: refresh,
+    }),
+  };
 }
 
 export function useRemove(resource: string) {
