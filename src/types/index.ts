@@ -73,7 +73,7 @@ export interface ProductListItem {
   is_multi_part: boolean;
   part_count: number;
   pack_per_box: number;
-  is_fragile: boolean;
+  main_image: string | null;
   status: ProductStatus;
 }
 

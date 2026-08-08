@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Plus, ShieldAlert } from "lucide-react";
+import { ImageOff, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -69,6 +69,7 @@ export default function ProductsPage() {
           <Table>
             <THead>
               <tr>
+                <TH className="w-14" />
                 <TH>Style No</TH>
                 <TH>Description</TH>
                 <TH>Category</TH>
@@ -77,19 +78,33 @@ export default function ProductsPage() {
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={5}>
+                <EmptyRow colSpan={6}>
                   <span className="text-destructive">Could not load products.</span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={5}>
+                <EmptyRow colSpan={6}>
                   Nothing matches. Try clearing the filters.
                 </EmptyRow>
               )}
               {rows.map((row) => (
                 <TR key={row.id}>
+                  <TD className="pr-0">
+                    {row.main_image ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={row.main_image}
+                        alt=""
+                        className="size-9 rounded-md border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-9 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground/50">
+                        <ImageOff className="size-3.5" />
+                      </div>
+                    )}
+                  </TD>
                   <TD>
                     <Link
                       href={`/products/${row.id}`}
@@ -98,14 +113,7 @@ export default function ProductsPage() {
                       {row.style_no}
                     </Link>
                   </TD>
-                  <TD>
-                    <span className="inline-flex items-center gap-1.5">
-                      {row.description}
-                      {row.is_fragile && (
-                        <ShieldAlert className="size-3.5 text-warning" />
-                      )}
-                    </span>
-                  </TD>
+                  <TD>{row.description}</TD>
                   <TD className="text-secondary-foreground">
                     {row.category_name || "—"}
                   </TD>
