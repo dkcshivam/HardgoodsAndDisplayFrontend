@@ -92,8 +92,8 @@ export interface Product extends Partial<PackSpec> {
   customs_description: string;
   hsn_code: string;
 
+  /** Fixed at creation — the shape every carton for this SKU was built from. */
   is_multi_part: boolean;
-  is_fragile: boolean;
   status: ProductStatus;
 
   // Reference only — the item never ships assembled.
