@@ -2,7 +2,14 @@
 
 import { use, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Plus, Trash2, Wand2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  FileSpreadsheet,
+  Plus,
+  Trash2,
+  Wand2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
@@ -34,7 +41,8 @@ export default function PackingPage({
 
   const order = useOrder(orderId);
   const plan = usePackingPlan(orderId);
-  const { autoPack, savePacking, advance } = useOrderAction(orderId);
+  const { autoPack, savePacking, advance, downloadPackingList } =
+    useOrderAction(orderId);
 
   const [cartons, setCartons] = useState<CartonDraft[]>([]);
   const [dirty, setDirty] = useState(false);
@@ -182,6 +190,31 @@ export default function PackingPage({
                 disabled={autoPack.isPending}
               >
                 <Wand2 /> {autoPack.isPending ? "Packing…" : "Auto-pack"}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={
+                  cartons.length === 0 || dirty || downloadPackingList.isPending
+                }
+                title={
+                  dirty
+                    ? "Save the plan first — the sheet is built from what is stored."
+                    : "Download the packing list as an Excel sheet"
+                }
+                onClick={() =>
+                  downloadPackingList.mutate(order.data.number, {
+                    onError: (error) =>
+                      toast.error(
+                        error instanceof ApiError
+                          ? error.detail
+                          : "Could not build the packing list",
+                      ),
+                  })
+                }
+              >
+                <FileSpreadsheet />{" "}
+                {downloadPackingList.isPending ? "Preparing…" : "Packing list"}
               </Button>
               {order.data.status === "packed" && (
                 <Button

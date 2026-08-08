@@ -142,5 +142,12 @@ export function useOrderAction(orderId: number) {
       mutationFn: () => api.post<Order>(`/orders/${orderId}/advance-status/`),
       onSuccess: refresh,
     }),
+    downloadPackingList: useMutation({
+      mutationFn: (orderNumber: string) =>
+        api.download(
+          `/orders/${orderId}/packing-list/`,
+          `packing-list-${orderNumber}.xlsx`,
+        ),
+    }),
   };
 }

@@ -73,12 +73,38 @@ export function query(params: Record<string, string | number | boolean | undefin
   return string ? `?${string}` : "";
 }
 
+/**
+ * Fetch a file and hand it to the browser's downloader. Goes through the
+ * same wrapper as everything else so a rejected download still reports its
+ * error rather than opening a tab of JSON.
+ */
+async function download(path: string, filename: string): Promise<void> {
+  const response = await fetch(`${BASE_URL}${path}`, { credentials: "include" });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiError(
+      response.status,
+      text ? safeJsonParse(text) : null,
+      `GET ${path} failed with ${response.status}`,
+    );
+  }
+
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
   delete: <T>(path: string) => request<T>("DELETE", path),
+  download,
 };
 
 export interface Paginated<T> {
