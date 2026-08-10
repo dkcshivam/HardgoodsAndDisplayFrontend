@@ -25,6 +25,7 @@ hot-reload normally.
 
 ```
 src/app            routes; (app)/ carries the shell (sidebar, topbar)
+src/app/(app)/display  the Display module — products, templates, orders, packing
 src/components/ui  primitives — button, input, table, dialog, toast
 src/components     everything else we wrote
 src/lib/api.ts     the single fetch wrapper
@@ -33,6 +34,12 @@ src/lib/calc.ts    mirror of the backend's calc.py
 src/lib/packing.ts mirror of reconcile() and find_blockers()
 src/types          mirrors DRF output exactly
 ```
+
+Display is a separate module, not a variant of Hardgoods — separate routes,
+separate types, separate API resources. See ARCHITECTURE.md §10 in the backend
+repo. Its packing screen works in **steps**, not cartons: `packing/` returns the
+plan and `cartons/` paginates the boxes, because a display order runs to
+thousands of them.
 
 ## Rules
 
