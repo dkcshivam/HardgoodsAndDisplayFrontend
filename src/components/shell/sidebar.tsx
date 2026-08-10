@@ -30,10 +30,13 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/orders", label: "Orders", icon: ClipboardList },
     ],
   },
+  // Box designs are authored inside an order's packing screen — the only
+  // place the remaining quantities are visible — so they get no nav entry.
   {
     title: "Display",
     items: [
-      { href: "/display", label: "Coming soon", icon: Sparkles, disabled: true },
+      { href: "/display/products", label: "Products", icon: Sparkles },
+      { href: "/display/orders", label: "Orders", icon: ClipboardList },
     ],
   },
   {

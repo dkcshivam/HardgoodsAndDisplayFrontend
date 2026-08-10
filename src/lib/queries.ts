@@ -9,9 +9,14 @@ import {
 import { api, query, type Paginated } from "@/lib/api";
 import type {
   Category,
+  DisplayCarton,
+  DisplayOrder,
+  DisplayPackingPlan,
+  DisplayProduct,
   Merchant,
   Order,
   PackingPlan,
+  PackTemplate,
   Product,
   ProductImage,
   ProductListItem,
@@ -122,6 +127,89 @@ export function useRemove(resource: string) {
     mutationFn: (id: number) => api.delete<void>(`/${resource}/${id}/`),
     onSuccess: () => client.invalidateQueries({ queryKey: [resource] }),
   });
+}
+
+/* ── Display ──────────────────────────────────────────────────────── */
+
+export const useDisplayProducts = (filters?: Filters) =>
+  useList<DisplayProduct>("display-products", filters);
+export const usePackTemplates = (filters?: Filters) =>
+  useList<PackTemplate>("pack-templates", filters);
+export const useDisplayOrders = (filters?: Filters) =>
+  useList<DisplayOrder>("display-orders", filters);
+
+export const useDisplayProduct = (id: number | null) =>
+  useQuery({
+    queryKey: ["display-products", id],
+    queryFn: () => api.get<DisplayProduct>(`/display-products/${id}/`),
+    enabled: id !== null,
+  });
+
+export const useDisplayOrder = (id: number) =>
+  useQuery({
+    queryKey: ["display-orders", id],
+    queryFn: () => api.get<DisplayOrder>(`/display-orders/${id}/`),
+  });
+
+export const useDisplayPackingPlan = (orderId: number) =>
+  useQuery({
+    queryKey: ["display-orders", orderId, "packing"],
+    queryFn: () =>
+      api.get<DisplayPackingPlan>(`/display-orders/${orderId}/packing/`),
+  });
+
+/**
+ * The boxes, separately from the plan. `packing/` deliberately omits them —
+ * a finished order runs to thousands and the screen works in steps.
+ */
+export const useDisplayCartons = (
+  orderId: number,
+  step: number | null,
+) =>
+  useQuery({
+    queryKey: ["display-orders", orderId, "cartons", step],
+    queryFn: () =>
+      api.get<Paginated<DisplayCarton>>(
+        `/display-orders/${orderId}/cartons/${query({ step: step ?? undefined })}`,
+      ),
+    enabled: step !== null,
+  });
+
+export function useDisplayOrderAction(orderId: number) {
+  const client = useQueryClient();
+  const refresh = () =>
+    client.invalidateQueries({ queryKey: ["display-orders"] });
+
+  return {
+    applyStep: useMutation({
+      mutationFn: ({ template, count }: { template: number; count?: number }) =>
+        api.post<DisplayPackingPlan>(`/display-orders/${orderId}/steps/`, {
+          template,
+          ...(count === undefined ? {} : { count }),
+        }),
+      onSuccess: refresh,
+    }),
+    recountStep: useMutation({
+      mutationFn: ({ sequence, count }: { sequence: number; count: number }) =>
+        api.patch<DisplayPackingPlan>(
+          `/display-orders/${orderId}/steps/${sequence}/`,
+          { count },
+        ),
+      onSuccess: refresh,
+    }),
+    deleteStep: useMutation({
+      mutationFn: (sequence: number) =>
+        api.delete<DisplayPackingPlan>(
+          `/display-orders/${orderId}/steps/${sequence}/`,
+        ),
+      onSuccess: refresh,
+    }),
+    advance: useMutation({
+      mutationFn: () =>
+        api.post<DisplayOrder>(`/display-orders/${orderId}/advance-status/`),
+      onSuccess: refresh,
+    }),
+  };
 }
 
 export function useOrderAction(orderId: number) {

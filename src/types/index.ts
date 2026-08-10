@@ -208,3 +208,183 @@ export interface PackingPlan {
   total_cbm: number;
   can_save: boolean;
 }
+
+/* ── Display ────────────────────────────────────────────────────────
+ *
+ * A separate module, not a variant of the above. See ARCHITECTURE.md §10:
+ * a display product owns no box — the pack template does — and the plan is
+ * a list of steps rather than a list of cartons.
+ */
+
+export interface DisplayProduct {
+  id: number;
+  style_no: string;
+  description: string;
+  category: number | null;
+  category_name: string;
+  customs_description: string;
+  hsn_code: string;
+  status: ProductStatus;
+
+  product_weight_kg: number | null;
+
+  /** The item itself. Its box belongs to the template. */
+  length_in: number | null;
+  width_in: number | null;
+  height_in: number | null;
+  unit_cbm: number;
+
+  created_at: string;
+}
+
+export interface PackTemplateItem {
+  id: number;
+  product: number;
+  product_style_no: string;
+  product_description: string;
+  quantity: number;
+}
+
+export interface PackTemplate {
+  id: number;
+  code: string;
+  name: string;
+  merchant: number | null;
+  merchant_name: string | null;
+  remark: string;
+
+  box_length_in: number | null;
+  box_width_in: number | null;
+  box_height_in: number | null;
+  box_weight_kg: number | null;
+  packing_material_weight_kg: number | null;
+
+  /** A *full* box of this template — no carton reads these. */
+  cbm: number;
+  net_weight_kg: number;
+  gross_weight_kg: number;
+  total_units: number;
+
+  /** Off for a one-off authored against a single order's tail. */
+  is_library: boolean;
+  /** Set on a one-off: it is offered on that order and nowhere else. */
+  order: number | null;
+  is_active: boolean;
+
+  items: PackTemplateItem[];
+  created_at: string;
+}
+
+export interface DisplayOrderLine {
+  id: number;
+  product: number;
+  product_style_no: string;
+  product_description: string;
+  color: string;
+  quantity: number;
+}
+
+export interface DisplayOrder {
+  id: number;
+  number: string;
+  name: string;
+  merchant: number;
+  merchant_name: string;
+  buyer_name: string;
+  shipping_address: ShippingAddress;
+  status: OrderStatus;
+  lines: DisplayOrderLine[];
+  carton_count: number;
+  created_at: string;
+}
+
+export interface DisplayCartonContent {
+  id: number;
+  product: number;
+  product_style_no: string;
+  description: string;
+  quantity: number;
+  unit: "pcs" | "set";
+  net_weight_kg: number | null;
+}
+
+export interface DisplayCarton {
+  id: number;
+  carton_no: string;
+  /** Provenance. Null means somebody built this box by hand. */
+  step: number | null;
+  template_code: string | null;
+  length_in: number | null;
+  width_in: number | null;
+  height_in: number | null;
+  box_weight_kg: number | null;
+  packing_material_weight_kg: number | null;
+  net_weight_kg: number;
+  gross_weight_kg: number | null;
+  cbm: number;
+  sort_order: number;
+  contents: DisplayCartonContent[];
+}
+
+/** One product's share of a step's consumption, or of what is left. */
+export interface QuantityRow {
+  product: number;
+  style_no: string;
+  description: string;
+  quantity: number;
+}
+
+/** One application of a template, plus the derivation the screen shows. */
+export interface PackStepRow {
+  sequence: number;
+  template: number;
+  template_code: string;
+  template_name: string;
+  count: number;
+  carton_count: number;
+  consumed: QuantityRow[];
+  remaining_after: QuantityRow[];
+}
+
+export interface ApplicableTemplate {
+  template: number;
+  code: string;
+  name: string;
+  /** How many times it fits what is left, right now. */
+  capacity: number;
+  units_per_carton: number;
+}
+
+export type WarningCode = "template_capacity_exceeded" | "poor_fill";
+
+/** Advisory only — never blocks a save. */
+export interface PackWarning {
+  code: WarningCode;
+  message: string;
+  carton_id: number | null;
+}
+
+/** A step the replay had to change because an earlier one moved. */
+export interface Adjustment {
+  sequence: number;
+  template_code: string;
+  was: number;
+  now: number;
+}
+
+export interface DisplayPackingPlan {
+  order: number;
+  steps: PackStepRow[];
+  remaining: QuantityRow[];
+  applicable_templates: ApplicableTemplate[];
+  reconciliation: Reconciliation[];
+  blockers: Blocker[];
+  warnings: PackWarning[];
+  carton_count: number;
+  total_quantity: number;
+  total_gross_weight_kg: number;
+  total_cbm: number;
+  can_save: boolean;
+  /** Only present on the response to a step edit. */
+  adjustments?: Adjustment[];
+}
