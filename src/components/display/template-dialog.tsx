@@ -21,6 +21,7 @@ import {
   maxApplications,
   mixedCartonGrossWeight,
   mixedCartonNetWeight,
+  pieceKey,
 } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,8 @@ import type { PackTemplate, QuantityRow } from "@/types";
 
 interface ItemDraft {
   product: number | null;
+  /** Which part of it. Required when the product packs as parts. */
+  part: number | null;
   quantity: number;
 }
 
@@ -57,7 +60,7 @@ const BLANK: Draft = {
   packing_material_weight_kg: null,
   is_library: true,
   order: null,
-  items: [{ product: null, quantity: 1 }],
+  items: [{ product: null, part: null, quantity: 1 }],
 };
 
 /**
@@ -108,21 +111,42 @@ export function TemplateDialog({
     });
 
   const filled = draft.items.filter(
-    (item): item is { product: number; quantity: number } =>
+    (item): item is { product: number; part: number | null; quantity: number } =>
       item.product !== null,
   );
 
-  const left = new Map((remaining ?? []).map((row) => [row.product, row.quantity]));
+  const productOf = (id: number) => catalogue.find((p) => p.id === id);
+
+  /** The part a row names, or the product itself when it is one piece. */
+  const pieceOf = (item: { product: number; part: number | null }) => {
+    const product = productOf(item.product);
+    if (!product) return undefined;
+    return item.part === null
+      ? product
+      : product.parts.find((part) => part.id === item.part);
+  };
+
+  const labelOf = (item: { product: number; part: number | null }) => {
+    const product = productOf(item.product);
+    if (!product) return "";
+    const part = item.part
+      ? product.parts.find((candidate) => candidate.id === item.part)
+      : undefined;
+    return part ? `${product.style_no} — ${part.name}` : product.style_no;
+  };
+
+  const left = new Map(
+    (remaining ?? []).map((row) => [pieceKey(row), row.quantity]),
+  );
   const fits = remaining ? maxApplications(filled, left) : null;
 
   // What this design would actually do to the order — the point of the dialog.
   const outcome = filled.map((item) => {
-    const product = catalogue.find((p) => p.id === item.product);
-    const available = left.get(item.product) ?? 0;
+    const available = left.get(pieceKey(item)) ?? 0;
     const used = item.quantity * (fits ?? 0);
     return {
-      key: item.product,
-      styleNo: product?.style_no ?? "",
+      key: pieceKey(item),
+      styleNo: labelOf(item),
       perBox: item.quantity,
       available,
       used,
@@ -133,8 +157,7 @@ export function TemplateDialog({
   const stranded = outcome.filter((row) => row.over > 0);
 
   const weighed = filled.map((item) => ({
-    productWeightKg:
-      catalogue.find((p) => p.id === item.product)?.product_weight_kg ?? null,
+    productWeightKg: pieceOf(item)?.product_weight_kg ?? null,
     quantity: item.quantity,
   }));
   const net = mixedCartonNetWeight(weighed, draft.packing_material_weight_kg);
@@ -148,21 +171,27 @@ export function TemplateDialog({
     draft.box_width_in,
     draft.box_height_in,
   );
-  const occupied = filled.reduce((sum, item) => {
-    const product = catalogue.find((p) => p.id === item.product);
-    return sum + (product?.unit_cbm ?? 0) * item.quantity;
-  }, 0);
+  const occupied = filled.reduce(
+    (sum, item) => sum + (pieceOf(item)?.unit_cbm ?? 0) * item.quantity,
+    0,
+  );
   const fill = boxVolume > 0 ? occupied / boxVolume : 0;
 
   function submit() {
     const found: Record<string, string> = {};
     if (!draft.code.trim()) found.code = "Required";
     if (!draft.name.trim()) found.name = "Required";
-    if (filled.length === 0) found.items = "A design needs at least one product.";
+    if (filled.length === 0) found.items = "A design needs at least one piece.";
 
-    const ids = filled.map((item) => item.product);
-    if (new Set(ids).size !== ids.length)
-      found.items = "The same product is listed twice — combine the rows.";
+    const keys = filled.map(pieceKey);
+    if (new Set(keys).size !== keys.length)
+      found.items = "The same piece is listed twice — combine the rows.";
+
+    const unnamed = filled.find(
+      (item) => item.part === null && productOf(item.product)?.is_multi_part,
+    );
+    if (unnamed)
+      found.items = `${productOf(unnamed.product)?.style_no} packs as parts — say which part goes in this box.`;
 
     setErrors(found);
     if (Object.keys(found).length > 0) {
@@ -217,22 +246,38 @@ export function TemplateDialog({
                 variant="ghost"
                 size="sm"
                 onClick={() =>
-                  set({ items: [...draft.items, { product: null, quantity: 1 }] })
+                  set({
+                    items: [
+                      ...draft.items,
+                      { product: null, part: null, quantity: 1 },
+                    ],
+                  })
                 }
               >
-                <Plus /> Add product
+                <Plus /> Add piece
               </Button>
             </div>
 
             <div className="space-y-2">
               {draft.items.map((item, index) => {
-                const available = item.product ? left.get(item.product) : undefined;
+                const chosen =
+                  item.product !== null ? productOf(item.product) : undefined;
+                const available =
+                  item.product !== null
+                    ? left.get(
+                        pieceKey({ product: item.product, part: item.part }),
+                      )
+                    : undefined;
                 return (
                   <div key={index} className="flex items-center gap-2">
                     <Select
                       value={item.product ?? ""}
                       onChange={(event) =>
-                        setItem(index, { product: number(event.target.value) })
+                        // The old part belonged to the old product, so it goes.
+                        setItem(index, {
+                          product: number(event.target.value),
+                          part: null,
+                        })
                       }
                       className="flex-1"
                     >
@@ -243,6 +288,22 @@ export function TemplateDialog({
                         </option>
                       ))}
                     </Select>
+                    {chosen?.is_multi_part && (
+                      <Select
+                        value={item.part ?? ""}
+                        onChange={(event) =>
+                          setItem(index, { part: number(event.target.value) })
+                        }
+                        className="flex-1"
+                      >
+                        <option value="">Which part?</option>
+                        {chosen.parts.map((part) => (
+                          <option key={part.id} value={part.id}>
+                            {part.name}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
                     <Input
                       type="number"
                       min={1}
@@ -349,7 +410,11 @@ export function TemplateDialog({
                               onClick={() =>
                                 set({
                                   items: draft.items.map((item) =>
-                                    item.product === row.key
+                                    item.product !== null &&
+                                    pieceKey({
+                                      product: item.product,
+                                      part: item.part,
+                                    }) === row.key
                                       ? { ...item, quantity: value }
                                       : item,
                                   ),
@@ -545,6 +610,7 @@ function seed(template?: PackTemplate, remaining?: QuantityRow[]): Draft {
       order: template.order,
       items: template.items.map((item) => ({
         product: item.product,
+        part: item.part,
         quantity: item.quantity,
       })),
     };
@@ -555,7 +621,11 @@ function seed(template?: PackTemplate, remaining?: QuantityRow[]): Draft {
   if (remaining && remaining.length > 0) {
     return {
       ...BLANK,
-      items: remaining.map((row) => ({ product: row.product, quantity: 1 })),
+      items: remaining.map((row) => ({
+        product: row.product,
+        part: row.part,
+        quantity: 1,
+      })),
     };
   }
 
