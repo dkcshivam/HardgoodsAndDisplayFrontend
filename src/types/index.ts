@@ -268,6 +268,9 @@ export interface PackTemplateItem {
   product: number;
   product_style_no: string;
   product_description: string;
+  /** Which part of it goes in this box; null when the product is one piece. */
+  part: number | null;
+  part_name: string;
   quantity: number;
 }
 
@@ -355,7 +358,10 @@ export interface DisplayCarton {
 /** One product's share of a step's consumption, or of what is left. */
 export interface QuantityRow {
   product: number;
+  /** Set when the product packs as parts — this row counts that part alone. */
+  part: number | null;
   style_no: string;
+  part_name: string;
   description: string;
   quantity: number;
 }

@@ -66,15 +66,23 @@ export function mixedCartonGrossWeight(
  * The server decides; this only lets the dialog answer while someone types.
  */
 export function maxApplications(
-  items: { product: number; quantity: number }[],
-  remaining: Map<number, number>,
+  items: { product: number; part: number | null; quantity: number }[],
+  remaining: Map<string, number>,
 ): number {
   if (items.length === 0) return 0;
   return Math.min(
     ...items.map((item) =>
-      Math.floor((remaining.get(item.product) ?? 0) / item.quantity),
+      Math.floor((remaining.get(pieceKey(item)) ?? 0) / item.quantity),
     ),
   );
+}
+
+/**
+ * A product and a part identify one thing to pack. Everything the loop counts
+ * is keyed by this, because two parts of one product are two separate jobs.
+ */
+export function pieceKey(piece: { product: number; part: number | null }): string {
+  return `${piece.product}:${piece.part ?? ""}`;
 }
 
 /**

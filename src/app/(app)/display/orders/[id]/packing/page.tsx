@@ -27,7 +27,7 @@ import {
   useDisplayPackingPlan,
 } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
-import { format } from "@/lib/calc";
+import { format, pieceKey } from "@/lib/calc";
 import type { Adjustment, QuantityRow } from "@/types";
 
 export default function DisplayPackingPage({
@@ -194,7 +194,7 @@ export default function DisplayPackingPage({
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {data.remaining.map((row) => (
-                      <RemainingChip key={row.product} row={row} />
+                      <RemainingChip key={pieceKey(row)} row={row} />
                     ))}
                   </div>
                 )}
@@ -404,9 +404,9 @@ export default function DisplayPackingPage({
                       <TD>
                         <div className="flex flex-wrap gap-1">
                           {step.consumed.map((row) => (
-                            <Badge key={row.product} tone="info">
+                            <Badge key={pieceKey(row)} tone="info">
                               <span className="tabular">{row.quantity}</span>
-                              {row.style_no}
+                              {pieceLabel(row)}
                             </Badge>
                           ))}
                         </div>
@@ -418,10 +418,10 @@ export default function DisplayPackingPage({
                           <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                             {step.remaining_after.map((row) => (
                               <span
-                                key={row.product}
+                                key={pieceKey(row)}
                                 className="tabular text-xs text-muted-foreground"
                               >
-                                {row.quantity} {row.style_no}
+                                {row.quantity} {pieceLabel(row)}
                               </span>
                             ))}
                           </div>
@@ -609,11 +609,19 @@ function StepHeading({
   );
 }
 
+/**
+ * A product's parts are counted separately, so a chip names the part as well
+ * — "8 DSP-TBL-01" would not say which of the two is still loose.
+ */
+function pieceLabel(row: QuantityRow): string {
+  return row.part_name ? `${row.style_no} — ${row.part_name}` : row.style_no;
+}
+
 function RemainingChip({ row }: { row: QuantityRow }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-card px-2.5 py-1 text-xs">
       <span className="tabular font-semibold text-warning">{row.quantity}</span>
-      <span className="tabular font-medium">{row.style_no}</span>
+      <span className="tabular font-medium">{pieceLabel(row)}</span>
       <span className="text-muted-foreground">{row.description}</span>
     </span>
   );
