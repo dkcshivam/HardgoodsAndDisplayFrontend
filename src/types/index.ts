@@ -216,6 +216,26 @@ export interface PackingPlan {
  * a list of steps rather than a list of cartons.
  */
 
+/**
+ * One separately-packed component. Like its product it owns no box — the
+ * point of it is that a product's parts may go into *different* templates.
+ */
+export interface DisplayProductPart {
+  id: number;
+  name: string;
+  description: string;
+  customs_description: string;
+  hsn_code: string;
+
+  product_weight_kg: number | null;
+  length_in: number | null;
+  width_in: number | null;
+  height_in: number | null;
+  unit_cbm: number;
+
+  sort_order: number;
+}
+
 export interface DisplayProduct {
   id: number;
   style_no: string;
@@ -224,8 +244,12 @@ export interface DisplayProduct {
   category_name: string;
   customs_description: string;
   hsn_code: string;
+
+  /** Fixed at creation — every template item for this SKU assumed it. */
+  is_multi_part: boolean;
   status: ProductStatus;
 
+  /** Empty on a multi-part product; its parts carry these instead. */
   product_weight_kg: number | null;
 
   /** The item itself. Its box belongs to the template. */
@@ -233,6 +257,8 @@ export interface DisplayProduct {
   width_in: number | null;
   height_in: number | null;
   unit_cbm: number;
+
+  parts: DisplayProductPart[];
 
   created_at: string;
 }
