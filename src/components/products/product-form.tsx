@@ -32,7 +32,12 @@ import {
   type PendingPhoto,
   type PhotoBinding,
 } from "@/components/products/photo-gallery";
-import { useCategories, usePhotoActions, useRemove, useSave } from "@/lib/queries";
+import {
+  useCategories,
+  usePhotoActions,
+  useRemove,
+  useSave,
+} from "@/lib/queries";
 import { cbm, grossWeight, format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import type { Product, ProductImage, ProductStatus } from "@/types";
@@ -262,7 +267,9 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
       // Parts come back in the order they were sent.
       const savedPart = saved.parts[index];
       if (savedPart) {
-        part.pending_images.forEach((photo) => queue(photo, { part: savedPart.id }));
+        part.pending_images.forEach((photo) =>
+          queue(photo, { part: savedPart.id }),
+        );
       }
     });
 
@@ -281,7 +288,8 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
     if (!form.style_no.trim()) found.style_no = "Required";
     if (!form.description.trim()) found.description = "Required";
     if (form.is_multi_part) {
-      if (form.parts.length < 2) found.parts = "A multi-part product needs at least two parts.";
+      if (form.parts.length < 2)
+        found.parts = "A multi-part product needs at least two parts.";
       else if (form.parts.some((part) => !part.name.trim()))
         found.parts = "Every part needs a name.";
     }
@@ -376,7 +384,11 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
             <CardTitle>Identity</CardTitle>
           </CardHeader>
           <CardBody className="space-y-4">
-            <Field label="Style No" required error={errors.style_no || undefined}>
+            <Field
+              label="Style No"
+              required
+              error={errors.style_no || undefined}
+            >
               <Input
                 value={form.style_no}
                 invalid={Boolean(errors.style_no)}
@@ -404,7 +416,9 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               <Field label="Category">
                 <Select
                   value={form.category ?? ""}
-                  onChange={(event) => set({ category: toNumber(event.target.value) })}
+                  onChange={(event) =>
+                    set({ category: toNumber(event.target.value) })
+                  }
                 >
                   <option value="">None</option>
                   {(categories.data?.results ?? []).map((item) => (
@@ -542,7 +556,11 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 <CardTitle>The carton</CardTitle>
               </CardHeader>
               <CardBody>
-                <PackSpecFields value={form} onChange={set} idPrefix="product" />
+                <PackSpecFields
+                  value={form}
+                  onChange={set}
+                  idPrefix="product"
+                />
               </CardBody>
             </Card>
           </>
@@ -563,7 +581,9 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                       step="0.01"
                       value={form.assembled_length_in ?? ""}
                       onChange={(event) =>
-                        set({ assembled_length_in: toNumber(event.target.value) })
+                        set({
+                          assembled_length_in: toNumber(event.target.value),
+                        })
                       }
                     />
                   </Field>
@@ -573,7 +593,9 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                       step="0.01"
                       value={form.assembled_width_in ?? ""}
                       onChange={(event) =>
-                        set({ assembled_width_in: toNumber(event.target.value) })
+                        set({
+                          assembled_width_in: toNumber(event.target.value),
+                        })
                       }
                     />
                   </Field>
@@ -583,7 +605,9 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                       step="0.01"
                       value={form.assembled_height_in ?? ""}
                       onChange={(event) =>
-                        set({ assembled_height_in: toNumber(event.target.value) })
+                        set({
+                          assembled_height_in: toNumber(event.target.value),
+                        })
                       }
                     />
                   </Field>
@@ -606,7 +630,9 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 <div>
                   <CardTitle>Parts</CardTitle>
                   {errors.parts && (
-                    <p className="mt-0.5 text-xs text-destructive">{errors.parts}</p>
+                    <p className="mt-0.5 text-xs text-destructive">
+                      {errors.parts}
+                    </p>
                   )}
                 </div>
                 <Button
@@ -614,7 +640,9 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                   variant="secondary"
                   size="sm"
                   onClick={() =>
-                    set({ parts: [...form.parts, blankPart(form.parts.length)] })
+                    set({
+                      parts: [...form.parts, blankPart(form.parts.length)],
+                    })
                   }
                 >
                   <Plus /> Add part
