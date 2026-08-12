@@ -222,19 +222,11 @@ export default function DisplayPackingPage({
                   <div className="flex size-10 items-center justify-center rounded-full bg-primary-subtle text-primary">
                     <Package className="size-5" />
                   </div>
-                  <div className="max-w-lg">
-                    <h3 className="text-sm font-semibold">
-                      {data.steps.length === 0
-                        ? "No box designs yet"
-                        : "Nothing on file fits what is left"}
-                    </h3>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      A design says what goes into one carton — “30 bows and 5
-                      wreaths” — and the box it goes in. Write one against the
-                      leftovers above and it will tell you how many cartons that
-                      makes and exactly what it strands, before you commit.
-                    </p>
-                  </div>
+                  <h3 className="text-sm font-semibold">
+                    {data.steps.length === 0
+                      ? "No box designs yet"
+                      : "Nothing on file fits what is left"}
+                  </h3>
                   <Button onClick={() => setAuthoring(true)}>
                     <Package /> Design a box
                   </Button>
@@ -299,12 +291,7 @@ export default function DisplayPackingPage({
 
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-secondary/30 px-5 py-4">
                   <p className="text-xs text-muted-foreground">
-                    Nothing here suits it?{" "}
-                    <span className="font-medium text-foreground">
-                      Design a new box.
-                    </span>{" "}
-                    It opens against the leftovers above — the only place you
-                    can see them.
+                    Nothing here suits what is left?
                   </p>
                   <Button
                     variant="secondary"
