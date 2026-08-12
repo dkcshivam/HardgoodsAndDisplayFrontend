@@ -453,14 +453,14 @@ export default function DisplayPackingPage({
           )}
 
           {data.blockers.length > 0 && (
-            <Card className="border-destructive-border bg-destructive-subtle">
+            <Card className="border-primary/30 bg-primary-subtle">
               <CardBody>
-                <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                   <AlertTriangle className="size-4" />
                   {data.blockers.length}{" "}
                   {data.blockers.length === 1 ? "blocker" : "blockers"}
                 </div>
-                <ul className="mt-2 space-y-1 text-xs text-destructive">
+                <ul className="mt-2 space-y-1 text-xs text-primary">
                   {data.blockers.slice(0, 8).map((blocker, index) => (
                     <li key={index}>• {blocker.message}</li>
                   ))}
