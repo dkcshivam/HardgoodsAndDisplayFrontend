@@ -95,11 +95,16 @@ export function TemplateDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [subject, setSubject] = useState(template?.id ?? null);
-  if (open && subject !== (template?.id ?? null)) {
+  const [everOpen, setEverOpen] = useState(open);
+  // Hides the "Fits N×" line while a qty is mid-edit, so it doesn't flicker
+  // through half-typed numbers — it settles once you tab or click away.
+  const [typingRow, setTypingRow] = useState<string | null>(null);
+  if (open && (!everOpen || subject !== (template?.id ?? null))) {
     setSubject(template?.id ?? null);
     setDraft(seed(template));
     setErrors({});
   }
+  if (everOpen !== open) setEverOpen(open);
 
   const set = (patch: Partial<Draft>) => setDraft({ ...draft, ...patch });
   const number = (value: string) => (value === "" ? null : Number(value));
@@ -243,7 +248,7 @@ export function TemplateDialog({
               <span className="text-xs font-medium text-secondary-foreground">
                 What goes in the box
               </span>
-              {fits !== null && filled.length > 0 && (
+              {fits !== null && filled.length > 0 && typingRow === null && (
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 text-xs font-semibold",
