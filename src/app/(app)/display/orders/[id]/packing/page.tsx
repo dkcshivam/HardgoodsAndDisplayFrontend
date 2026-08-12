@@ -251,7 +251,8 @@ export default function DisplayPackingPage({
                     <tr>
                       <TH>Design</TH>
                       <TH className="w-28 text-right">Units/box</TH>
-                      <TH className="w-32" />
+                      <TH className="w-20 text-right">Fits</TH>
+                      <TH className="w-24" />
                     </tr>
                   </THead>
                   <tbody>
@@ -268,6 +269,9 @@ export default function DisplayPackingPage({
                         <TD className="tabular text-right text-secondary-foreground">
                           {template.units_per_carton}
                         </TD>
+                        <TD className="tabular text-right font-semibold text-primary">
+                          {template.capacity}×
+                        </TD>
                         <TD className="text-right">
                           <Button
                             size="sm"
@@ -280,7 +284,7 @@ export default function DisplayPackingPage({
                               )
                             }
                           >
-                            Apply {template.capacity}×
+                            Apply
                           </Button>
                         </TD>
                       </TR>
