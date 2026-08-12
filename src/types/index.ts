@@ -425,6 +425,13 @@ export interface DisplayReconciliation extends Reconciliation {
   store_code: string;
 }
 
+/** A store named only by identity — a copy target, not a progress report. */
+export interface StoreRef {
+  store: number;
+  store_code: string;
+  store_name: string;
+}
+
 /** How far one store has got. The overview the packing screen opens on. */
 export interface StoreProgress {
   store: number;
@@ -473,6 +480,8 @@ export interface DisplayPackingPlan {
   remaining: QuantityRow[];
   applicable_templates: ApplicableTemplate[];
   reconciliation: DisplayReconciliation[];
+  /** Stores this store's plan could be copied onto verbatim. */
+  replicable: StoreRef[];
   blockers: Blocker[];
   warnings: PackWarning[];
   carton_count: number;
@@ -482,4 +491,6 @@ export interface DisplayPackingPlan {
   can_save: boolean;
   /** Only present on the response to a step edit. */
   adjustments?: Adjustment[];
+  /** Only present on the response to a replicate. */
+  replicated_to?: StoreRef[];
 }

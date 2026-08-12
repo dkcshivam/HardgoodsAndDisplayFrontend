@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Check,
+  Copy,
   Info,
   Package,
   Trash2,
@@ -48,8 +49,13 @@ export default function DisplayPackingPage({
 
   const order = useDisplayOrder(orderId);
   const plan = useDisplayPackingPlan(orderId, store);
-  const { applyStep, recountStep, deleteStep, advance } =
-    useDisplayOrderAction(orderId, store);
+  const {
+    applyStep,
+    recountStep,
+    deleteStep,
+    replicatePlan,
+    advance,
+  } = useDisplayOrderAction(orderId, store);
 
   const [dropping, setDropping] = useState<number | null>(null);
   const [authoring, setAuthoring] = useState(false);
@@ -85,6 +91,7 @@ export default function DisplayPackingPage({
     applyStep.isPending ||
     recountStep.isPending ||
     deleteStep.isPending ||
+    replicatePlan.isPending ||
     plan.isFetching;
 
   function report(adjustments?: Adjustment[]) {
@@ -453,6 +460,55 @@ export default function DisplayPackingPage({
                 </div>
               )}
             </Card>
+
+            {/* The bulk move: most of a big order's stores want the identical
+                thing, so one plan usually serves nearly all of them. */}
+            {data.replicable.length > 0 && (
+              <Card className="mt-3 border-primary/30 bg-primary-subtle">
+                <CardBody className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-secondary-foreground">
+                    <span className="font-medium text-foreground">
+                      {data.replicable.length} other store
+                      {data.replicable.length === 1 ? "" : "s"} want
+                      {data.replicable.length === 1 ? "s" : ""} exactly this
+                      and {data.replicable.length === 1 ? "is" : "are"} not
+                      packed yet.
+                    </span>{" "}
+                    <span className="tabular">
+                      {data.replicable
+                        .slice(0, 8)
+                        .map((row) => row.store_code)
+                        .join(", ")}
+                      {data.replicable.length > 8 &&
+                        ` and ${data.replicable.length - 8} more`}
+                    </span>
+                  </p>
+                  <Button
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => {
+                      if (store === null) return;
+                      replicatePlan.mutate(store, {
+                        onSuccess: (updated) =>
+                          toast.success(
+                            `Copied to ${updated.replicated_to?.length ?? 0} store${
+                              (updated.replicated_to?.length ?? 0) === 1 ? "" : "s"
+                            }`,
+                          ),
+                        onError: (error) =>
+                          toast.error(
+                            error instanceof ApiError
+                              ? error.detail
+                              : "Could not copy this plan",
+                          ),
+                      });
+                    }}
+                  >
+                    <Copy /> Apply to all {data.replicable.length}
+                  </Button>
+                </CardBody>
+              </Card>
+            )}
           </section>
             </>
           )}

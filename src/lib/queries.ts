@@ -239,6 +239,13 @@ export function useDisplayOrderAction(orderId: number, storeId: number | null) {
         ),
       onSuccess: onStepChange,
     }),
+    replicatePlan: useMutation({
+      mutationFn: (store: number) =>
+        api.post<DisplayPackingPlan>(`/display-orders/${orderId}/replicate/`, {
+          store,
+        }),
+      onSuccess: onStepChange,
+    }),
     advance: useMutation({
       mutationFn: () =>
         api.post<DisplayOrder>(`/display-orders/${orderId}/advance-status/`),
