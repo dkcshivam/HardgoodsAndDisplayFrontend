@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Check,
   Copy,
+  Download,
   Info,
   Package,
   Trash2,
@@ -54,6 +55,7 @@ export default function DisplayPackingPage({
     recountStep,
     deleteStep,
     replicatePlan,
+    downloadPackingList,
     advance,
   } = useDisplayOrderAction(orderId, store);
 
@@ -161,6 +163,21 @@ export default function DisplayPackingPage({
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {data.carton_count > 0 && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={downloadPackingList.isPending}
+                  onClick={() =>
+                    downloadPackingList.mutate(order.data!.number, {
+                      onError: () => toast.error("Could not build the sheet"),
+                    })
+                  }
+                >
+                  <Download />
+                  {downloadPackingList.isPending ? "Building…" : "Packing list"}
+                </Button>
+              )}
               {order.data.status === "packed" && (
                 <Button
                   variant="secondary"

@@ -251,6 +251,13 @@ export function useDisplayOrderAction(orderId: number, storeId: number | null) {
         api.post<DisplayOrder>(`/display-orders/${orderId}/advance-status/`),
       onSuccess: refresh,
     }),
+    downloadPackingList: useMutation({
+      mutationFn: (orderNumber: string) =>
+        api.download(
+          `/display-orders/${orderId}/packing-list/`,
+          `packing-list-${orderNumber}.xlsx`,
+        ),
+    }),
   };
 }
 
