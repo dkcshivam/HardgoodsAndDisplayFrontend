@@ -21,6 +21,29 @@ export interface Merchant {
   is_active: boolean;
 }
 
+/**
+ * One outlet of a merchant. The merchant buys; the store receives — and since
+ * a carton is never shared between two stores, this is the boundary a display
+ * order is split along.
+ */
+export interface Store {
+  id: number;
+  merchant: number;
+  merchant_name: string;
+  code: string;
+  name: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  ship_line1: string;
+  ship_line2: string;
+  ship_city: string;
+  ship_state: string;
+  ship_postal_code: string;
+  ship_country: string;
+  is_active: boolean;
+}
+
 export type ProductStatus = "active" | "inactive";
 
 /** Repeats identically on a single-box product and on every part. */

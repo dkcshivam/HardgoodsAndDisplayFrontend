@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Boxes,
+  Building2,
   ChevronDown,
   ClipboardList,
   LayoutDashboard,
@@ -43,7 +44,8 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     title: "Admin",
     items: [
       { href: "/categories", label: "Categories", icon: Tags },
-      { href: "/merchants", label: "Merchants", icon: Store },
+      { href: "/merchants", label: "Merchants", icon: Building2 },
+      { href: "/stores", label: "Stores", icon: Store },
     ],
   },
 ];

@@ -20,6 +20,7 @@ import type {
   Product,
   ProductImage,
   ProductListItem,
+  Store,
 } from "@/types";
 
 type Filters = Record<string, string | number | boolean | undefined>;
@@ -40,6 +41,7 @@ export const useCategories = (filters?: Filters) =>
   useList<Category>("categories", filters);
 export const useMerchants = (filters?: Filters) =>
   useList<Merchant>("merchants", filters);
+export const useStores = (filters?: Filters) => useList<Store>("stores", filters);
 export const useProducts = (filters?: Filters) =>
   useList<ProductListItem>("products", filters);
 export const useOrders = (filters?: Filters) => useList<Order>("orders", filters);
