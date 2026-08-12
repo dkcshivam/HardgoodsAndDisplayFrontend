@@ -492,11 +492,23 @@ export function TemplateDialog({
             <p
               className={cn(
                 "text-xs",
-                fill < 0.3 ? "text-warning" : "text-muted-foreground",
+                fill > 1 || fill < 0.3 ? "text-warning" : "text-muted-foreground",
               )}
             >
-              Contents fill about {Math.round(fill * 100)}% of the box
-              {fill < 0.3 && " — the rest is freight paid on air"}.
+              {/* Over 100% is not a fill level — it means the box is too small
+                  for what was typed, and a percentage reads as nonsense. */}
+              {fill > 1 ? (
+                <>
+                  Contents come to {format.cbm(occupied)} CBM but the box holds{" "}
+                  {format.cbm(boxVolume)} CBM — they will not fit. Check the
+                  box dimensions.
+                </>
+              ) : (
+                <>
+                  Contents fill about {Math.round(fill * 100)}% of the box
+                  {fill < 0.3 && " — the rest is freight paid on air"}.
+                </>
+              )}
             </p>
           )}
         </DialogBody>
