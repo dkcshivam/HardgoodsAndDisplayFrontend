@@ -85,30 +85,6 @@ export function pieceKey(piece: { product: number; part: number | null }): strin
   return `${piece.product}:${piece.part ?? ""}`;
 }
 
-/**
- * Per-box counts that divide `total` exactly, nearest to `near` first.
- *
- * The whole difficulty of this module is the tail: 110 garlands six to a box
- * strands two, ten to a box strands none. Suggesting the divisors turns that
- * from something you notice four steps later into something you see now.
- */
-export function evenSplits(total: number, near: number, take = 3): number[] {
-  if (total <= 1) return [];
-
-  const divisors = new Set<number>();
-  for (let d = 1; d * d <= total; d++) {
-    if (total % d !== 0) continue;
-    if (d > 1) divisors.add(d);
-    const pair = total / d;
-    if (pair > 1 && pair < total) divisors.add(pair);
-  }
-
-  return [...divisors]
-    .sort((a, b) => Math.abs(a - near) - Math.abs(b - near) || a - b)
-    .slice(0, take)
-    .sort((a, b) => a - b);
-}
-
 export const format = {
   weight: (kg: number | null | undefined) => (kg ?? 0).toFixed(3),
   cbm: (value: number | null | undefined) => (value ?? 0).toFixed(4),

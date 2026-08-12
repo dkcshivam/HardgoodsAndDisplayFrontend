@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Check, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DialogRoot,
@@ -10,13 +10,12 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Input, Select, Textarea } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { Field, FieldRow } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { useDisplayProducts, useSave } from "@/lib/queries";
 import {
   cbm,
-  evenSplits,
   format,
   maxApplications,
   mixedCartonGrossWeight,
@@ -25,13 +24,15 @@ import {
 } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import type { PackTemplate, QuantityRow } from "@/types";
+import type { DisplayProduct, PackTemplate, QuantityRow } from "@/types";
 
-interface ItemDraft {
-  product: number | null;
-  /** Which part of it. Required when the product packs as parts. */
+/** One row of the piece table — a whole product, or one part of one. */
+interface PieceRow {
+  product: number;
   part: number | null;
-  quantity: number;
+  label: string;
+  /** Set only when designing against an order's remaining demand. */
+  before?: number;
 }
 
 interface Draft {
@@ -46,7 +47,8 @@ interface Draft {
   packing_material_weight_kg: number | null;
   is_library: boolean;
   order: number | null;
-  items: ItemDraft[];
+  /** Quantity per box, keyed by piece. A piece absent or at 0 is not in the design. */
+  quantities: Record<string, number>;
 }
 
 const BLANK: Draft = {
@@ -60,13 +62,13 @@ const BLANK: Draft = {
   packing_material_weight_kg: null,
   is_library: true,
   order: null,
-  items: [{ product: null, part: null, quantity: 1 }],
+  quantities: {},
 };
 
 /**
  * Designing a box. Opened from an order's packing screen against whatever is
- * left, which is why it takes `remaining` — and why it spends most of its room
- * telling you what a design would leave behind.
+ * left, which is why it takes `remaining` — and why every row previews what
+ * choosing a quantity would leave behind.
  */
 export function TemplateDialog({
   open,
@@ -85,76 +87,73 @@ export function TemplateDialog({
 }) {
   const toast = useToast();
   const products = useDisplayProducts({ status: "active" });
-  const save = useSave<Draft, PackTemplate>("pack-templates");
+  const save = useSave<Record<string, unknown>, PackTemplate>("pack-templates");
 
   const catalogue = products.data?.results ?? [];
 
-  const [draft, setDraft] = useState<Draft>(() => seed(template, remaining));
+  const [draft, setDraft] = useState<Draft>(() => seed(template));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [subject, setSubject] = useState(template?.id ?? null);
   if (open && subject !== (template?.id ?? null)) {
     setSubject(template?.id ?? null);
-    setDraft(seed(template, remaining));
+    setDraft(seed(template));
     setErrors({});
   }
 
   const set = (patch: Partial<Draft>) => setDraft({ ...draft, ...patch });
   const number = (value: string) => (value === "" ? null : Number(value));
 
-  const setItem = (index: number, patch: Partial<ItemDraft>) =>
+  const setQuantity = (row: PieceRow, quantity: number) =>
     setDraft({
       ...draft,
-      items: draft.items.map((item, i) =>
-        i === index ? { ...item, ...patch } : item,
-      ),
+      quantities: { ...draft.quantities, [pieceKey(row)]: Math.max(0, quantity) },
     });
 
-  const filled = draft.items.filter(
-    (item): item is { product: number; part: number | null; quantity: number } =>
-      item.product !== null,
-  );
+  // Every candidate piece for this box: whatever the order still needs, or —
+  // designing outside an order — the whole active catalogue exploded into
+  // pieces. Nothing to add or remove; a quantity of 0 just means "not in this
+  // box".
+  const candidateRows: PieceRow[] = remaining
+    ? remaining.map((row) => ({
+        product: row.product,
+        part: row.part,
+        label: pieceLabel(row.style_no, row.part_name),
+        before: row.quantity,
+      }))
+    : catalogRows(catalogue, template);
 
   const productOf = (id: number) => catalogue.find((p) => p.id === id);
 
   /** The part a row names, or the product itself when it is one piece. */
-  const pieceOf = (item: { product: number; part: number | null }) => {
-    const product = productOf(item.product);
+  const pieceOf = (row: { product: number; part: number | null }) => {
+    const product = productOf(row.product);
     if (!product) return undefined;
-    return item.part === null
+    return row.part === null
       ? product
-      : product.parts.find((part) => part.id === item.part);
+      : product.parts.find((part) => part.id === row.part);
   };
 
-  const labelOf = (item: { product: number; part: number | null }) => {
-    const product = productOf(item.product);
-    if (!product) return "";
-    const part = item.part
-      ? product.parts.find((candidate) => candidate.id === item.part)
-      : undefined;
-    return part ? `${product.style_no} — ${part.name}` : product.style_no;
-  };
+  const filled = candidateRows
+    .map((row) => ({ ...row, quantity: draft.quantities[pieceKey(row)] ?? 0 }))
+    .filter((row) => row.quantity > 0);
 
   const left = new Map(
     (remaining ?? []).map((row) => [pieceKey(row), row.quantity]),
   );
   const fits = remaining ? maxApplications(filled, left) : null;
 
-  // What this design would actually do to the order — the point of the dialog.
-  const outcome = filled.map((item) => {
-    const available = left.get(pieceKey(item)) ?? 0;
-    const used = item.quantity * (fits ?? 0);
-    return {
-      key: pieceKey(item),
-      styleNo: labelOf(item),
-      perBox: item.quantity,
-      available,
-      used,
-      over: available - used,
-    };
-  });
+  /** What choosing this row's quantity would leave behind, at `fits`×. */
+  function afterQuantity(row: PieceRow, quantity: number): number | undefined {
+    if (row.before === undefined || fits === null || quantity === 0) {
+      return row.before;
+    }
+    return row.before - quantity * fits;
+  }
 
-  const stranded = outcome.filter((row) => row.over > 0);
+  const leavesSomething = filled.some(
+    (row) => (afterQuantity(row, row.quantity) ?? 0) > 0,
+  );
 
   const weighed = filled.map((item) => ({
     productWeightKg: pieceOf(item)?.product_weight_kg ?? null,
@@ -181,17 +180,7 @@ export function TemplateDialog({
     const found: Record<string, string> = {};
     if (!draft.code.trim()) found.code = "Required";
     if (!draft.name.trim()) found.name = "Required";
-    if (filled.length === 0) found.items = "A design needs at least one piece.";
-
-    const keys = filled.map(pieceKey);
-    if (new Set(keys).size !== keys.length)
-      found.items = "The same piece is listed twice — combine the rows.";
-
-    const unnamed = filled.find(
-      (item) => item.part === null && productOf(item.product)?.is_multi_part,
-    );
-    if (unnamed)
-      found.items = `${productOf(unnamed.product)?.style_no} packs as parts — say which part goes in this box.`;
+    if (filled.length === 0) found.items = "Give at least one piece a quantity.";
 
     setErrors(found);
     if (Object.keys(found).length > 0) {
@@ -205,10 +194,22 @@ export function TemplateDialog({
 
     save.mutate(
       {
-        ...draft,
-        items: filled,
+        id: draft.id,
+        code: draft.code,
+        name: draft.name,
+        remark: draft.remark,
+        box_length_in: draft.box_length_in,
+        box_width_in: draft.box_width_in,
+        box_height_in: draft.box_height_in,
+        box_weight_kg: draft.box_weight_kg,
+        packing_material_weight_kg: draft.packing_material_weight_kg,
         is_library: library,
         order: library ? null : (orderId ?? null),
+        items: filled.map(({ product, part, quantity }) => ({
+          product,
+          part,
+          quantity,
+        })),
       },
       {
         onSuccess: (saved) => {
@@ -242,198 +243,112 @@ export function TemplateDialog({
               <span className="text-xs font-medium text-secondary-foreground">
                 What goes in the box
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  set({
-                    items: [
-                      ...draft.items,
-                      { product: null, part: null, quantity: 1 },
-                    ],
-                  })
-                }
-              >
-                <Plus /> Add piece
-              </Button>
+              {fits !== null && filled.length > 0 && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 text-xs font-semibold",
+                    fits === 0
+                      ? "text-warning"
+                      : leavesSomething
+                        ? "text-warning"
+                        : "text-success",
+                  )}
+                >
+                  {fits === 0 ? (
+                    <>
+                      <TriangleAlert className="size-3.5" />
+                      Doesn&rsquo;t fit yet
+                    </>
+                  ) : leavesSomething ? (
+                    <>
+                      <TriangleAlert className="size-3.5" />
+                      Fits {fits}× — leaves some behind
+                    </>
+                  ) : (
+                    <>
+                      <Check className="size-3.5" />
+                      Fits {fits}× — uses every one
+                    </>
+                  )}
+                </span>
+              )}
             </div>
 
-            <div className="space-y-2">
-              {draft.items.map((item, index) => {
-                const chosen =
-                  item.product !== null ? productOf(item.product) : undefined;
-                const available =
-                  item.product !== null
-                    ? left.get(
-                        pieceKey({ product: item.product, part: item.part }),
-                      )
-                    : undefined;
-                return (
-                  <div key={index} className="flex items-center gap-2">
-                    <Select
-                      value={item.product ?? ""}
-                      onChange={(event) =>
-                        // The old part belonged to the old product, so it goes.
-                        setItem(index, {
-                          product: number(event.target.value),
-                          part: null,
-                        })
-                      }
-                      className="flex-1"
-                    >
-                      <option value="">Choose a product</option>
-                      {catalogue.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.style_no} · {product.description}
-                        </option>
-                      ))}
-                    </Select>
-                    {chosen?.is_multi_part && (
-                      <Select
-                        value={item.part ?? ""}
-                        onChange={(event) =>
-                          setItem(index, { part: number(event.target.value) })
-                        }
-                        className="flex-1"
-                      >
-                        <option value="">Which part?</option>
-                        {chosen.parts.map((part) => (
-                          <option key={part.id} value={part.id}>
-                            {part.name}
-                          </option>
-                        ))}
-                      </Select>
-                    )}
-                    <Input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(event) =>
-                        setItem(index, {
-                          quantity: Number(event.target.value) || 1,
-                        })
-                      }
-                      className="tabular w-20 text-right"
-                    />
-                    <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
-                      {available === undefined ? "" : `of ${available}`}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-destructive hover:bg-destructive-subtle"
-                      onClick={() =>
-                        set({ items: draft.items.filter((_, i) => i !== index) })
-                      }
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
+            {candidateRows.length === 0 ? (
+              <p className="rounded-md border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
+                No active display products yet — add one first.
+              </p>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-border">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border-subtle bg-secondary/40 text-muted-foreground">
+                      <th className="px-3 py-2 text-left font-medium">Piece</th>
+                      {remaining && (
+                        <th className="px-3 py-2 text-right font-medium">
+                          Still needed
+                        </th>
+                      )}
+                      <th className="w-24 px-3 py-2 text-right font-medium">
+                        Qty / box
+                      </th>
+                      {remaining && (
+                        <th className="w-24 px-3 py-2 text-right font-medium">
+                          Leaves
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {candidateRows.map((row) => {
+                      const key = pieceKey(row);
+                      const quantity = draft.quantities[key] ?? 0;
+                      const after = afterQuantity(row, quantity);
+                      return (
+                        <tr
+                          key={key}
+                          className="border-b border-border-subtle last:border-0"
+                        >
+                          <td className="px-3 py-2">{row.label}</td>
+                          {remaining && (
+                            <td className="tabular px-3 py-2 text-right text-muted-foreground">
+                              {row.before}
+                            </td>
+                          )}
+                          <td className="px-2 py-1.5 text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={quantity}
+                              onChange={(event) =>
+                                setQuantity(row, Number(event.target.value) || 0)
+                              }
+                              className="tabular h-8 w-20 text-right"
+                            />
+                          </td>
+                          {remaining && (
+                            <td
+                              className={cn(
+                                "tabular px-3 py-2 text-right font-medium",
+                                quantity > 0 && (after ?? 0) > 0
+                                  ? "text-warning"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {quantity > 0 ? after : "—"}
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
             {errors.items && (
               <p className="mt-1.5 text-xs text-destructive">{errors.items}</p>
             )}
           </div>
-
-          {/* The guidance. Everything above is inputs; this is the answer. */}
-          {remaining && filled.length > 0 && (
-            <div
-              className={cn(
-                "rounded-lg border px-4 py-3",
-                stranded.length === 0
-                  ? "border-success/25 bg-success-subtle"
-                  : "border-warning/30 bg-warning-subtle",
-              )}
-            >
-              {fits === 0 ? (
-                <p className="flex items-start gap-2 text-xs text-warning">
-                  <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-                  This design does not fit what is left — one of its products has
-                  run out, or it asks for more per box than remain.
-                </p>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    {stranded.length === 0 ? (
-                      <span className="inline-flex items-center gap-1.5 text-success">
-                        <Check className="size-4" />
-                        Fits {fits}× and uses every one
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-warning">
-                        <TriangleAlert className="size-4" />
-                        Fits {fits}×, but leaves some behind
-                      </span>
-                    )}
-                  </div>
-
-                  <table className="mt-2 w-full text-xs">
-                    <thead>
-                      <tr className="text-muted-foreground">
-                        <th className="text-left font-medium">Product</th>
-                        <th className="text-right font-medium">Per box</th>
-                        <th className="text-right font-medium">Uses</th>
-                        <th className="text-right font-medium">Left over</th>
-                      </tr>
-                    </thead>
-                    <tbody className="tabular">
-                      {outcome.map((row) => (
-                        <tr key={row.key}>
-                          <td className="py-0.5">{row.styleNo}</td>
-                          <td className="py-0.5 text-right">{row.perBox}</td>
-                          <td className="py-0.5 text-right">{row.used}</td>
-                          <td
-                            className={cn(
-                              "py-0.5 text-right font-semibold",
-                              row.over > 0 ? "text-warning" : "text-success",
-                            )}
-                          >
-                            {row.over}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {stranded.map((row) => {
-                    const splits = evenSplits(row.available, row.perBox);
-                    if (splits.length === 0) return null;
-                    return (
-                      <p key={row.key} className="mt-2 text-xs text-warning">
-                        {row.styleNo}: try{" "}
-                        {splits.map((value, index) => (
-                          <span key={value}>
-                            {index > 0 && (index === splits.length - 1 ? " or " : ", ")}
-                            <button
-                              onClick={() =>
-                                set({
-                                  items: draft.items.map((item) =>
-                                    item.product !== null &&
-                                    pieceKey({
-                                      product: item.product,
-                                      part: item.part,
-                                    }) === row.key
-                                      ? { ...item, quantity: value }
-                                      : item,
-                                  ),
-                                })
-                              }
-                              className="tabular font-semibold underline underline-offset-2 hover:no-underline"
-                            >
-                              {value}
-                            </button>
-                          </span>
-                        ))}{" "}
-                        per box to use all {row.available}.
-                      </p>
-                    );
-                  })}
-                </>
-              )}
-            </div>
-          )}
 
           <FieldRow className="sm:grid-cols-3">
             <Field label="Code" required error={errors.code || undefined}>
@@ -594,42 +509,67 @@ export function TemplateDialog({
   );
 }
 
-function seed(template?: PackTemplate, remaining?: QuantityRow[]): Draft {
+function pieceLabel(styleNo: string, partName: string): string {
+  return partName ? `${styleNo} — ${partName}` : styleNo;
+}
+
+/**
+ * The full active catalogue, one row per piece — a whole product, or every
+ * part of a multi-part one. Falls back to a saved template's own item labels
+ * for a piece the active catalogue no longer lists (its product deactivated
+ * since), so editing never silently drops a row.
+ */
+function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): PieceRow[] {
+  const rows: PieceRow[] = catalogue.flatMap((product): PieceRow[] =>
+    product.is_multi_part
+      ? product.parts.map((part) => ({
+          product: product.id,
+          part: part.id,
+          label: pieceLabel(product.style_no, part.name),
+        }))
+      : [{ product: product.id, part: null, label: product.style_no }],
+  );
+
   if (template) {
-    return {
-      id: template.id,
-      code: template.code,
-      name: template.name,
-      remark: template.remark,
-      box_length_in: template.box_length_in,
-      box_width_in: template.box_width_in,
-      box_height_in: template.box_height_in,
-      box_weight_kg: template.box_weight_kg,
-      packing_material_weight_kg: template.packing_material_weight_kg,
-      is_library: template.is_library,
-      order: template.order,
-      items: template.items.map((item) => ({
-        product: item.product,
-        part: item.part,
-        quantity: item.quantity,
-      })),
-    };
+    const known = new Set(rows.map(pieceKey));
+    for (const item of template.items) {
+      const key = pieceKey(item);
+      if (!known.has(key)) {
+        rows.push({
+          product: item.product,
+          part: item.part,
+          label: pieceLabel(item.product_style_no, item.part_name),
+        });
+        known.add(key);
+      }
+    }
   }
 
-  // Authored from the packing screen: start from what is actually left, so
-  // the design is written against the remainder rather than from memory.
-  if (remaining && remaining.length > 0) {
-    return {
-      ...BLANK,
-      items: remaining.map((row) => ({
-        product: row.product,
-        part: row.part,
-        quantity: 1,
-      })),
-    };
+  return rows;
+}
+
+function seed(template?: PackTemplate): Draft {
+  if (!template) return BLANK;
+
+  const quantities: Record<string, number> = {};
+  for (const item of template.items) {
+    quantities[pieceKey(item)] = item.quantity;
   }
 
-  return BLANK;
+  return {
+    id: template.id,
+    code: template.code,
+    name: template.name,
+    remark: template.remark,
+    box_length_in: template.box_length_in,
+    box_width_in: template.box_width_in,
+    box_height_in: template.box_height_in,
+    box_weight_kg: template.box_weight_kg,
+    packing_material_weight_kg: template.packing_material_weight_kg,
+    is_library: template.is_library,
+    order: template.order,
+    quantities,
+  };
 }
 
 function Summary({
