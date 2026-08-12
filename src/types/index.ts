@@ -369,6 +369,10 @@ export interface DisplayCarton {
   carton_no: string;
   /** Provenance. Null means somebody built this box by hand. */
   step: number | null;
+  /** Where it ships. Held on the carton so a stepless box still knows. */
+  store: number;
+  store_code: string;
+  store_name: string;
   template_code: string | null;
   length_in: number | null;
   width_in: number | null;
@@ -384,6 +388,10 @@ export interface DisplayCarton {
 
 /** One product's share of a step's consumption, or of what is left. */
 export interface QuantityRow {
+  /** Whose it is. Two stores wanting one product are two separate rows. */
+  store: number;
+  store_code: string;
+  store_name: string;
   product: number;
   /** Set when the product packs as parts — this row counts that part alone. */
   part: number | null;
@@ -396,6 +404,9 @@ export interface QuantityRow {
 /** One application of a template, plus the derivation the screen shows. */
 export interface PackStepRow {
   sequence: number;
+  store: number;
+  store_code: string;
+  store_name: string;
   template: number;
   template_code: string;
   template_name: string;
@@ -403,6 +414,27 @@ export interface PackStepRow {
   carton_count: number;
   consumed: QuantityRow[];
   remaining_after: QuantityRow[];
+}
+
+/**
+ * Display reconciles store by store — twenty-four wreaths in Portland do
+ * nothing for Austin, so one product across two stores is two rows.
+ */
+export interface DisplayReconciliation extends Reconciliation {
+  store: number;
+  store_code: string;
+}
+
+/** How far one store has got. The overview the packing screen opens on. */
+export interface StoreProgress {
+  store: number;
+  store_code: string;
+  store_name: string;
+  ordered: number;
+  packed: number;
+  remaining: number;
+  carton_count: number;
+  is_done: boolean;
 }
 
 export interface ApplicableTemplate {
@@ -433,10 +465,14 @@ export interface Adjustment {
 
 export interface DisplayPackingPlan {
   order: number;
+  /** Which store the detail below is for. Null means the order overview. */
+  store: number | null;
+  /** Always the whole order, so the overview never needs a second request. */
+  stores: StoreProgress[];
   steps: PackStepRow[];
   remaining: QuantityRow[];
   applicable_templates: ApplicableTemplate[];
-  reconciliation: Reconciliation[];
+  reconciliation: DisplayReconciliation[];
   blockers: Blocker[];
   warnings: PackWarning[];
   carton_count: number;

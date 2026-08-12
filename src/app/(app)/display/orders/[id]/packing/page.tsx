@@ -26,7 +26,13 @@ import {
 } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
 import { format, pieceKey } from "@/lib/calc";
-import type { Adjustment, PackStepRow, QuantityRow } from "@/types";
+import { cn } from "@/lib/utils";
+import type {
+  Adjustment,
+  PackStepRow,
+  QuantityRow,
+  StoreProgress,
+} from "@/types";
 
 export default function DisplayPackingPage({
   params,
@@ -37,10 +43,13 @@ export default function DisplayPackingPage({
   const orderId = Number(id);
   const toast = useToast();
 
+  // Null is the overview across every store; a store id is that store's plan.
+  const [store, setStore] = useState<number | null>(null);
+
   const order = useDisplayOrder(orderId);
-  const plan = useDisplayPackingPlan(orderId);
+  const plan = useDisplayPackingPlan(orderId, store);
   const { applyStep, recountStep, deleteStep, advance } =
-    useDisplayOrderAction(orderId);
+    useDisplayOrderAction(orderId, store);
 
   const [dropping, setDropping] = useState<number | null>(null);
   const [authoring, setAuthoring] = useState(false);
@@ -63,7 +72,11 @@ export default function DisplayPackingPage({
   }
 
   const { data } = plan;
-  const done = data.remaining.length === 0;
+  const activeStore = data.stores.find((row) => row.store === store) ?? null;
+  // With no store chosen there is nothing to pack *into* — the overview is a
+  // place to choose from, not a plan.
+  const done = store !== null && data.remaining.length === 0;
+  const allDone = data.stores.every((row) => row.is_done);
 
   // Stays true through the refetch, not just the request. Re-enabling the
   // moment the POST returns leaves the old capacities on screen with live
@@ -85,8 +98,9 @@ export default function DisplayPackingPage({
   }
 
   function apply(template: number, code: string) {
+    if (store === null) return;
     applyStep.mutate(
-      { template, count: 1 },
+      { template, store, count: 1 },
       {
         onSuccess: () => {
           toast.success(`${code} applied — 1 carton added`);
@@ -181,13 +195,41 @@ export default function DisplayPackingPage({
             </div>
           </div>
 
+          {/* Which store, before anything else: a carton ships to exactly one,
+              so there is no such thing as packing the order as a whole. */}
+          <StorePicker
+            stores={data.stores}
+            active={store}
+            onPick={(next) => setStore(next)}
+          />
+
+          {store === null ? (
+            <Card className={allDone ? "border-success/25 bg-success-subtle" : undefined}>
+              <CardBody className="px-6 py-8 text-center">
+                <p className="text-sm">
+                  {allDone
+                    ? "Every store is packed."
+                    : "Choose a store above to pack it."}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  A carton ships to one store, so the plan is built store by
+                  store.
+                </p>
+              </CardBody>
+            </Card>
+          ) : (
+            <>
           <ReconciliationBar rows={data.reconciliation} />
 
           {/* ── 1 ─────────────────────────────────────────────────── */}
           <section>
             <StepHeading
               n={1}
-              title={done ? "Everything is packed" : "What still needs a box"}
+              title={
+                done
+                  ? `${activeStore?.store_code ?? ""} is packed`
+                  : `What ${activeStore?.store_code ?? "this store"} still needs`
+              }
               done={done}
             />
             <Card
@@ -412,6 +454,8 @@ export default function DisplayPackingPage({
               )}
             </Card>
           </section>
+            </>
+          )}
 
           {data.warnings.length > 0 && (
             <Card className="border-warning/30 bg-warning-subtle">
@@ -478,15 +522,19 @@ export default function DisplayPackingPage({
           {busy && (
             <span className="text-xs text-muted-foreground">Working…</span>
           )}
-          {!busy && !done && (
+          {/* Order-wide, whichever store is open — the footer is the whole
+              shipment's tally, not the one being worked on. */}
+          {!busy && !allDone && (
             <span className="text-xs text-warning">
               {format.integer(
-                data.remaining.reduce((sum, row) => sum + row.quantity, 0),
+                data.stores.reduce((sum, row) => sum + row.remaining, 0),
               )}{" "}
-              units still to pack
+              units still to pack across{" "}
+              {data.stores.filter((row) => !row.is_done).length} store
+              {data.stores.filter((row) => !row.is_done).length === 1 ? "" : "s"}
             </span>
           )}
-          {!busy && done && data.blockers.length === 0 && (
+          {!busy && allDone && data.blockers.length === 0 && (
             <span className="inline-flex items-center gap-1.5 text-xs text-success">
               <Check className="size-3.5" /> Plan is sound
             </span>
@@ -539,6 +587,78 @@ export default function DisplayPackingPage({
         onClose={() => setInspecting(null)}
       />
     </>
+  );
+}
+
+/**
+ * The order's stores and how far each has got. Opening here rather than on a
+ * plan is the point: at fifty stores the first question is which ones are not
+ * finished.
+ */
+function StorePicker({
+  stores,
+  active,
+  onPick,
+}: {
+  stores: StoreProgress[];
+  active: number | null;
+  onPick: (store: number | null) => void;
+}) {
+  const left = stores.filter((row) => !row.is_done).length;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Stores on this order</CardTitle>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {left === 0
+              ? `All ${stores.length} packed.`
+              : `${left} of ${stores.length} still need packing.`}
+          </p>
+        </div>
+        {active !== null && (
+          <Button variant="secondary" size="sm" onClick={() => onPick(null)}>
+            All stores
+          </Button>
+        )}
+      </CardHeader>
+      <CardBody className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {stores.map((row) => (
+          <button
+            key={row.store}
+            onClick={() => onPick(row.store)}
+            className={cn(
+              "rounded-md border px-3 py-2 text-left text-xs transition-colors",
+              active === row.store
+                ? "border-primary/50 bg-primary-subtle"
+                : row.is_done
+                  ? "border-success/25 bg-success-subtle hover:border-success/40"
+                  : "border-border bg-card hover:bg-secondary/50",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="tabular font-medium">{row.store_code}</span>
+              {row.is_done ? (
+                <span className="inline-flex items-center gap-1 text-success">
+                  <Check className="size-3.5" /> packed
+                </span>
+              ) : (
+                <span className="tabular text-warning">
+                  {format.integer(row.remaining)} left
+                </span>
+              )}
+            </div>
+            <div className="truncate text-muted-foreground">{row.store_name}</div>
+            <div className="tabular mt-0.5 text-muted-foreground">
+              {format.integer(row.packed)}/{format.integer(row.ordered)} units ·{" "}
+              {format.integer(row.carton_count)} carton
+              {row.carton_count === 1 ? "" : "s"}
+            </div>
+          </button>
+        ))}
+      </CardBody>
+    </Card>
   );
 }
 

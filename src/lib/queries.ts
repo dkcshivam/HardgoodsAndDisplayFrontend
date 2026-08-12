@@ -153,11 +153,21 @@ export const useDisplayOrder = (id: number) =>
     queryFn: () => api.get<DisplayOrder>(`/display-orders/${id}/`),
   });
 
-export const useDisplayPackingPlan = (orderId: number) =>
+/**
+ * Without a store this is the order overview; with one it is that store's
+ * plan. A box design only means something inside a single store, so the
+ * templates that fit are only returned once a store is named.
+ */
+export const useDisplayPackingPlan = (
+  orderId: number,
+  storeId: number | null = null,
+) =>
   useQuery({
-    queryKey: ["display-orders", orderId, "packing"],
+    queryKey: ["display-orders", orderId, "packing", storeId],
     queryFn: () =>
-      api.get<DisplayPackingPlan>(`/display-orders/${orderId}/packing/`),
+      api.get<DisplayPackingPlan>(
+        `/display-orders/${orderId}/packing/${query({ store: storeId ?? undefined })}`,
+      ),
   });
 
 /**
@@ -177,9 +187,9 @@ export const useDisplayCartons = (
     enabled: step !== null,
   });
 
-export function useDisplayOrderAction(orderId: number) {
+export function useDisplayOrderAction(orderId: number, storeId: number | null) {
   const client = useQueryClient();
-  const planKey = ["display-orders", orderId, "packing"];
+  const planKey = ["display-orders", orderId, "packing", storeId];
   const refresh = () =>
     client.invalidateQueries({ queryKey: ["display-orders"] });
 
@@ -196,17 +206,28 @@ export function useDisplayOrderAction(orderId: number) {
 
   return {
     applyStep: useMutation({
-      mutationFn: ({ template, count }: { template: number; count?: number }) =>
+      mutationFn: ({
+        template,
+        store,
+        count,
+      }: {
+        template: number;
+        store: number;
+        count?: number;
+      }) =>
         api.post<DisplayPackingPlan>(`/display-orders/${orderId}/steps/`, {
           template,
+          store,
           ...(count === undefined ? {} : { count }),
         }),
       onSuccess: onStepChange,
     }),
+    // The store rides on the query string so the replayed plan comes back
+    // scoped the same way the screen is showing it.
     recountStep: useMutation({
       mutationFn: ({ sequence, count }: { sequence: number; count: number }) =>
         api.patch<DisplayPackingPlan>(
-          `/display-orders/${orderId}/steps/${sequence}/`,
+          `/display-orders/${orderId}/steps/${sequence}/${query({ store: storeId ?? undefined })}`,
           { count },
         ),
       onSuccess: onStepChange,
@@ -214,7 +235,7 @@ export function useDisplayOrderAction(orderId: number) {
     deleteStep: useMutation({
       mutationFn: (sequence: number) =>
         api.delete<DisplayPackingPlan>(
-          `/display-orders/${orderId}/steps/${sequence}/`,
+          `/display-orders/${orderId}/steps/${sequence}/${query({ store: storeId ?? undefined })}`,
         ),
       onSuccess: onStepChange,
     }),
