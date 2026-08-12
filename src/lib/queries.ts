@@ -177,8 +177,20 @@ export const useDisplayCartons = (
 
 export function useDisplayOrderAction(orderId: number) {
   const client = useQueryClient();
+  const planKey = ["display-orders", orderId, "packing"];
   const refresh = () =>
     client.invalidateQueries({ queryKey: ["display-orders"] });
+
+  /**
+   * A step mutation's response IS the fresh plan — write it straight into the
+   * cache instead of only invalidating and waiting on a separate refetch.
+   * Without this, a just-typed value sits in a gap where the cache still
+   * holds the pre-edit plan and briefly flashes back to it.
+   */
+  const onStepChange = (plan: DisplayPackingPlan) => {
+    client.setQueryData(planKey, plan);
+    refresh();
+  };
 
   return {
     applyStep: useMutation({
@@ -187,7 +199,7 @@ export function useDisplayOrderAction(orderId: number) {
           template,
           ...(count === undefined ? {} : { count }),
         }),
-      onSuccess: refresh,
+      onSuccess: onStepChange,
     }),
     recountStep: useMutation({
       mutationFn: ({ sequence, count }: { sequence: number; count: number }) =>
@@ -195,14 +207,14 @@ export function useDisplayOrderAction(orderId: number) {
           `/display-orders/${orderId}/steps/${sequence}/`,
           { count },
         ),
-      onSuccess: refresh,
+      onSuccess: onStepChange,
     }),
     deleteStep: useMutation({
       mutationFn: (sequence: number) =>
         api.delete<DisplayPackingPlan>(
           `/display-orders/${orderId}/steps/${sequence}/`,
         ),
-      onSuccess: refresh,
+      onSuccess: onStepChange,
     }),
     advance: useMutation({
       mutationFn: () =>

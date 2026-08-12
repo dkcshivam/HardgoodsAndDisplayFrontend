@@ -87,11 +87,6 @@ export default function DisplayPackingPage({
     }
   }
 
-  function refresh() {
-    plan.refetch();
-    order.refetch();
-  }
-
   function apply(template: number, code: string, capacity: number) {
     applyStep.mutate(
       { template },
@@ -100,7 +95,6 @@ export default function DisplayPackingPage({
           toast.success(
             `${code} applied ${capacity}× — ${capacity} carton${capacity === 1 ? "" : "s"} added`,
           );
-          refresh();
         },
         onError: (error) =>
           toast.error(
@@ -367,24 +361,33 @@ export default function DisplayPackingPage({
                           onBlur={() => {
                             const typed = recount[step.sequence];
                             if (typed === undefined) return;
+
+                            // Clear only this field's override — another row
+                            // may still be mid-edit and must not be disturbed.
+                            const clearThis = () =>
+                              setRecount((prev) => {
+                                const next = { ...prev };
+                                delete next[step.sequence];
+                                return next;
+                              });
+
                             const next = Number(typed);
                             if (!next || next === step.count) {
-                              setRecount({});
+                              clearThis();
                               return;
                             }
                             recountStep.mutate(
                               { sequence: step.sequence, count: next },
                               {
                                 onSuccess: (updated) => {
-                                  setRecount({});
+                                  clearThis();
                                   report(updated.adjustments);
                                   toast.success(
                                     `Step ${step.sequence} set to ${next}`,
                                   );
-                                  refresh();
                                 },
                                 onError: (error) => {
-                                  setRecount({});
+                                  clearThis();
                                   toast.error(
                                     error instanceof ApiError
                                       ? error.detail
@@ -563,7 +566,6 @@ export default function DisplayPackingPage({
               report(updated.adjustments);
               toast.success(`Step ${sequence} dropped`);
               setDropping(null);
-              refresh();
             },
             onError: (error) => {
               setDropping(null);
