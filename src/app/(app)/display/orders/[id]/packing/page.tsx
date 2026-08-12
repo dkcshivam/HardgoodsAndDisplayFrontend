@@ -7,13 +7,11 @@ import {
   Check,
   Info,
   Package,
-  Pencil,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, StatusBadge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { DialogRoot, DialogContent, DialogBody } from "@/components/ui/dialog";
@@ -28,7 +26,7 @@ import {
 } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
 import { format, pieceKey } from "@/lib/calc";
-import type { Adjustment, QuantityRow } from "@/types";
+import type { Adjustment, PackStepRow, QuantityRow } from "@/types";
 
 export default function DisplayPackingPage({
   params,
@@ -44,7 +42,6 @@ export default function DisplayPackingPage({
   const { applyStep, recountStep, deleteStep, advance } =
     useDisplayOrderAction(orderId);
 
-  const [recount, setRecount] = useState<Record<number, string>>({});
   const [dropping, setDropping] = useState<number | null>(null);
   const [authoring, setAuthoring] = useState(false);
   const [inspecting, setInspecting] = useState<number | null>(null);
@@ -87,14 +84,12 @@ export default function DisplayPackingPage({
     }
   }
 
-  function apply(template: number, code: string, capacity: number) {
+  function apply(template: number, code: string) {
     applyStep.mutate(
-      { template },
+      { template, count: 1 },
       {
         onSuccess: () => {
-          toast.success(
-            `${code} applied ${capacity}× — ${capacity} carton${capacity === 1 ? "" : "s"} added`,
-          );
+          toast.success(`${code} applied — 1 carton added`);
         },
         onError: (error) =>
           toast.error(
@@ -105,6 +100,28 @@ export default function DisplayPackingPage({
       },
     );
   }
+
+  function bulkApply(step: PackStepRow, total: number) {
+    recountStep.mutate(
+      { sequence: step.sequence, count: total },
+      {
+        onSuccess: (updated) => {
+          report(updated.adjustments);
+          toast.success(`Step ${step.sequence} set to ${total}×`);
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof ApiError
+              ? error.detail
+              : "Could not fill out this step",
+          ),
+      },
+    );
+  }
+
+  const remainingMap = new Map(
+    data.remaining.map((row) => [pieceKey(row), row.quantity]),
+  );
 
   return (
     <>
@@ -234,8 +251,8 @@ export default function DisplayPackingPage({
                   <div>
                     <CardTitle>Box designs that fit what is left</CardTitle>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Applying one uses it as many times as it fits. The count
-                      is adjustable afterwards, in the plan below.
+                      Applying adds one carton. To fill out to what fits, use
+                      Apply ×N on that step in the plan below.
                     </p>
                   </div>
                 </CardHeader>
@@ -270,13 +287,7 @@ export default function DisplayPackingPage({
                           <Button
                             size="sm"
                             disabled={busy}
-                            onClick={() =>
-                              apply(
-                                template.template,
-                                template.code,
-                                template.capacity,
-                              )
-                            }
+                            onClick={() => apply(template.template, template.code)}
                           >
                             Apply
                           </Button>
@@ -316,144 +327,100 @@ export default function DisplayPackingPage({
                   <tr>
                     <TH className="w-14">Step</TH>
                     <TH>Design</TH>
-                    <TH className="w-28 text-right">
-                      Count
-                      <Pencil className="ml-1 inline size-3 opacity-50" />
-                    </TH>
                     <TH className="w-24 text-right">Cartons</TH>
                     <TH>Used up</TH>
                     <TH>Left after</TH>
-                    <TH className="w-12" />
+                    <TH className="w-44" />
                   </tr>
                 </THead>
                 <tbody>
                   {data.steps.length === 0 && (
-                    <EmptyRow colSpan={7}>
+                    <EmptyRow colSpan={6}>
                       Nothing packed yet. Apply a box design above to start.
                     </EmptyRow>
                   )}
-                  {data.steps.map((step) => (
-                    <TR key={step.sequence}>
-                      <TD className="tabular text-muted-foreground">
-                        {step.sequence}
-                      </TD>
-                      <TD>
-                        <span className="tabular font-medium">
-                          {step.template_code}
-                        </span>
-                        <div className="text-xs text-muted-foreground">
-                          {step.template_name}
-                        </div>
-                      </TD>
-                      <TD>
-                        <Input
-                          type="number"
-                          min={1}
-                          disabled={busy}
-                          value={recount[step.sequence] ?? step.count}
-                          title="Change this and tab away — every step after it is rebuilt."
-                          onChange={(event) =>
-                            setRecount({
-                              ...recount,
-                              [step.sequence]: event.target.value,
-                            })
-                          }
-                          onBlur={() => {
-                            const typed = recount[step.sequence];
-                            if (typed === undefined) return;
-
-                            // Clear only this field's override — another row
-                            // may still be mid-edit and must not be disturbed.
-                            const clearThis = () =>
-                              setRecount((prev) => {
-                                const next = { ...prev };
-                                delete next[step.sequence];
-                                return next;
-                              });
-
-                            const next = Number(typed);
-                            if (!next || next === step.count) {
-                              clearThis();
-                              return;
-                            }
-                            recountStep.mutate(
-                              { sequence: step.sequence, count: next },
-                              {
-                                onSuccess: (updated) => {
-                                  clearThis();
-                                  report(updated.adjustments);
-                                  toast.success(
-                                    `Step ${step.sequence} set to ${next}`,
-                                  );
-                                },
-                                onError: (error) => {
-                                  clearThis();
-                                  toast.error(
-                                    error instanceof ApiError
-                                      ? error.detail
-                                      : "Could not change the count",
-                                  );
-                                },
-                              },
-                            );
-                          }}
-                          className="tabular h-8 text-right"
-                        />
-                      </TD>
-                      <TD className="text-right">
-                        <button
-                          onClick={() => setInspecting(step.sequence)}
-                          className="tabular text-sm font-medium text-primary hover:underline"
-                        >
-                          {step.carton_count}
-                        </button>
-                      </TD>
-                      <TD>
-                        <div className="flex flex-wrap gap-1">
-                          {step.consumed.map((row) => (
-                            <Badge key={pieceKey(row)} tone="info">
-                              <span className="tabular">{row.quantity}</span>
-                              {pieceLabel(row)}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TD>
-                      <TD>
-                        {step.remaining_after.length === 0 ? (
-                          <span className="text-xs text-success">nothing</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                            {step.remaining_after.map((row) => (
-                              <span
-                                key={pieceKey(row)}
-                                className="tabular text-xs text-muted-foreground"
-                              >
-                                {row.quantity} {pieceLabel(row)}
-                              </span>
+                  {data.steps.map((step) => {
+                    const growth = stepGrowth(step, remainingMap);
+                    return (
+                      <TR key={step.sequence}>
+                        <TD className="tabular text-muted-foreground">
+                          {step.sequence}
+                        </TD>
+                        <TD>
+                          <span className="tabular font-medium">
+                            {step.template_code}
+                          </span>
+                          <div className="text-xs text-muted-foreground">
+                            {step.template_name}
+                          </div>
+                        </TD>
+                        <TD className="text-right">
+                          <button
+                            onClick={() => setInspecting(step.sequence)}
+                            className="tabular text-sm font-medium text-primary hover:underline"
+                          >
+                            {step.carton_count}
+                          </button>
+                        </TD>
+                        <TD>
+                          <div className="flex flex-wrap gap-1">
+                            {step.consumed.map((row) => (
+                              <Badge key={pieceKey(row)} tone="info">
+                                <span className="tabular">{row.quantity}</span>
+                                {pieceLabel(row)}
+                              </Badge>
                             ))}
                           </div>
-                        )}
-                      </TD>
-                      <TD>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={busy}
-                          className="text-destructive hover:bg-destructive-subtle"
-                          onClick={() => setDropping(step.sequence)}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </TD>
-                    </TR>
-                  ))}
+                        </TD>
+                        <TD>
+                          {step.remaining_after.length === 0 ? (
+                            <span className="text-xs text-success">nothing</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                              {step.remaining_after.map((row) => (
+                                <span
+                                  key={pieceKey(row)}
+                                  className="tabular text-xs text-muted-foreground"
+                                >
+                                  {row.quantity} {pieceLabel(row)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </TD>
+                        <TD>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {growth.extra > 0 && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() => bulkApply(step, growth.total)}
+                              >
+                                Apply {growth.total}×
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={busy}
+                              className="text-destructive hover:bg-destructive-subtle"
+                              onClick={() => setDropping(step.sequence)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
+                        </TD>
+                      </TR>
+                    );
+                  })}
                 </tbody>
               </Table>
               {data.steps.length > 0 && (
                 <div className="border-t border-border-subtle px-5 py-3 text-xs text-muted-foreground">
-                  Change a count and tab away, or drop a step, and everything
-                  after it is rebuilt. Carton numbers already given out never
-                  move. Click a carton count to see the boxes.
+                  Filling out a step or dropping one rebuilds everything after
+                  it. Carton numbers already given out never move. Click a
+                  carton count to see the boxes.
                 </div>
               )}
             </Card>
@@ -621,6 +588,29 @@ function StepHeading({
  */
 function pieceLabel(row: QuantityRow): string {
   return row.part_name ? `${row.style_no} — ${row.part_name}` : row.style_no;
+}
+
+/**
+ * How far a step could still grow: per piece, how much more `remaining`
+ * allows at this step's own per-application rate, capped by the tightest one.
+ */
+function stepGrowth(
+  step: PackStepRow,
+  remainingMap: Map<string, number>,
+): { extra: number; total: number } {
+  if (step.consumed.length === 0) return { extra: 0, total: step.count };
+  const extra = Math.max(
+    0,
+    Math.min(
+      ...step.consumed.map((row) => {
+        const perApplication = row.quantity / step.count;
+        return Math.floor(
+          (remainingMap.get(pieceKey(row)) ?? 0) / perApplication,
+        );
+      }),
+    ),
+  );
+  return { extra, total: step.count + extra };
 }
 
 function RemainingChip({ row }: { row: QuantityRow }) {
