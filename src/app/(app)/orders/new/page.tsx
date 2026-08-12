@@ -18,10 +18,11 @@ import type { ShippingAddress } from "@/types";
 interface LineDraft {
   product: number | null;
   color: string;
-  quantity: number;
+  /** Null while the field is empty — a pre-filled 1 turns a typed 12 into 112. */
+  quantity: number | null;
 }
 
-const BLANK_LINE: LineDraft = { product: null, color: "", quantity: 1 };
+const BLANK_LINE: LineDraft = { product: null, color: "", quantity: null };
 
 const BLANK_ADDRESS: ShippingAddress = {
   country: "US",
@@ -65,6 +66,9 @@ export default function NewOrderPage() {
     if (new Set(productIds).size !== productIds.length)
       found.lines = "Each product can appear only once. Change the quantity instead.";
 
+    if (filled.some((line) => !line.quantity))
+      found.lines = "Give every product a quantity.";
+
     setErrors(found);
     if (Object.keys(found).length > 0) {
       toast.error("Fix the highlighted fields.");
@@ -99,11 +103,12 @@ export default function NewOrderPage() {
   const estimatedCartons = lines.reduce((sum, line) => {
     const product = catalogue.find((item) => item.id === line.product);
     if (!product) return sum;
+    const quantity = line.quantity ?? 0;
     return (
       sum +
       (product.is_multi_part
-        ? product.part_count * line.quantity
-        : cartonCount(line.quantity, product.pack_per_box))
+        ? product.part_count * quantity
+        : cartonCount(quantity, product.pack_per_box))
     );
   }, 0);
 
@@ -254,8 +259,8 @@ export default function NewOrderPage() {
                 const product = catalogue.find((item) => item.id === line.product);
                 const cartons = product
                   ? product.is_multi_part
-                    ? product.part_count * line.quantity
-                    : cartonCount(line.quantity, product.pack_per_box)
+                    ? product.part_count * (line.quantity ?? 0)
+                    : cartonCount(line.quantity ?? 0, product.pack_per_box)
                   : 0;
                 return (
                   <TR key={index}>
@@ -284,17 +289,19 @@ export default function NewOrderPage() {
                         onChange={(event) =>
                           setLine(index, { color: event.target.value })
                         }
-                        placeholder="Natural Oak"
                       />
                     </TD>
                     <TD>
                       <Input
                         type="number"
                         min={1}
-                        value={line.quantity}
+                        value={line.quantity ?? ""}
                         onChange={(event) =>
                           setLine(index, {
-                            quantity: Number(event.target.value) || 1,
+                            quantity:
+                              event.target.value === ""
+                                ? null
+                                : Number(event.target.value) || null,
                           })
                         }
                         className="text-right tabular"

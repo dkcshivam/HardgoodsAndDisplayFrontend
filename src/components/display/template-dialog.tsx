@@ -319,9 +319,18 @@ export function TemplateDialog({
                             <Input
                               type="number"
                               min={0}
-                              value={quantity}
+                              // Blank rather than a literal 0, so typing 12
+                              // does not read as "012".
+                              value={quantity === 0 ? "" : quantity}
+                              placeholder="0"
                               onChange={(event) =>
                                 setQuantity(row, Number(event.target.value) || 0)
+                              }
+                              onFocus={() => setTypingRow(key)}
+                              onBlur={() =>
+                                setTypingRow((current) =>
+                                  current === key ? null : current,
+                                )
                               }
                               className="tabular h-8 w-20 text-right"
                             />

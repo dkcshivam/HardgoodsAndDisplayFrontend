@@ -18,10 +18,11 @@ import type { DisplayOrder, ShippingAddress } from "@/types";
 interface LineDraft {
   product: number | null;
   color: string;
-  quantity: number;
+  /** Null while the field is empty — a pre-filled 1 turns a typed 12 into 112. */
+  quantity: number | null;
 }
 
-const BLANK_LINE: LineDraft = { product: null, color: "", quantity: 1 };
+const BLANK_LINE: LineDraft = { product: null, color: "", quantity: null };
 
 const BLANK_ADDRESS: ShippingAddress = {
   country: "US",
@@ -54,7 +55,7 @@ export default function NewDisplayOrderPage() {
     );
 
   const totalUnits = lines.reduce(
-    (sum, line) => (line.product ? sum + line.quantity : sum),
+    (sum, line) => (line.product ? sum + (line.quantity ?? 0) : sum),
     0,
   );
 
@@ -70,6 +71,9 @@ export default function NewDisplayOrderPage() {
     if (new Set(ids).size !== ids.length)
       found.lines =
         "Each product can appear only once. Change the quantity instead.";
+
+    if (filled.some((line) => !line.quantity))
+      found.lines = "Give every product a quantity.";
 
     setErrors(found);
     if (Object.keys(found).length > 0) {
@@ -273,17 +277,19 @@ export default function NewDisplayOrderPage() {
                       onChange={(event) =>
                         setLine(index, { color: event.target.value })
                       }
-                      placeholder="Black"
                     />
                   </TD>
                   <TD>
                     <Input
                       type="number"
                       min={1}
-                      value={line.quantity}
+                      value={line.quantity ?? ""}
                       onChange={(event) =>
                         setLine(index, {
-                          quantity: Number(event.target.value) || 1,
+                          quantity:
+                            event.target.value === ""
+                              ? null
+                              : Number(event.target.value) || null,
                         })
                       }
                       className="tabular text-right"
