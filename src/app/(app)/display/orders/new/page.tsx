@@ -10,28 +10,24 @@ import { Input, Select } from "@/components/ui/input";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
-import { useDisplayProducts, useMerchants, useSave } from "@/lib/queries";
+import {
+  useDisplayProducts,
+  useMerchants,
+  useSave,
+  useStores,
+} from "@/lib/queries";
 import { format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
-import type { DisplayOrder, ShippingAddress } from "@/types";
+import { cn } from "@/lib/utils";
+import type { DisplayOrder } from "@/types";
 
-interface LineDraft {
+/** One store's demand for one product. The unit the order is really made of. */
+interface Row {
+  store: number;
   product: number | null;
   color: string;
-  /** Null while the field is empty — a pre-filled 1 turns a typed 12 into 112. */
   quantity: number | null;
 }
-
-const BLANK_LINE: LineDraft = { product: null, color: "", quantity: null };
-
-const BLANK_ADDRESS: ShippingAddress = {
-  country: "US",
-  line1: "",
-  line2: "",
-  city: "",
-  state: "",
-  postal_code: "",
-};
 
 export default function NewDisplayOrderPage() {
   const router = useRouter();
@@ -40,40 +36,104 @@ export default function NewDisplayOrderPage() {
   const [name, setName] = useState("");
   const [merchant, setMerchant] = useState<number | null>(null);
   const [buyerName, setBuyerName] = useState("");
-  const [address, setAddress] = useState<ShippingAddress>(BLANK_ADDRESS);
-  const [lines, setLines] = useState<LineDraft[]>([BLANK_LINE]);
+  const [chosen, setChosen] = useState<number[]>([]);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [active, setActive] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Bulk fill — the fast path when most stores want the same thing.
+  const [bulkProduct, setBulkProduct] = useState<number | null>(null);
+  const [bulkColor, setBulkColor] = useState("");
+  const [bulkQuantity, setBulkQuantity] = useState<number | null>(null);
 
   const merchants = useMerchants({ is_active: true });
   const products = useDisplayProducts({ status: "active" });
+  const stores = useStores({
+    is_active: true,
+    merchant: merchant ?? undefined,
+  });
   const save = useSave<Record<string, unknown>, DisplayOrder>("display-orders");
 
   const catalogue = products.data?.results ?? [];
-  const setLine = (index: number, patch: Partial<LineDraft>) =>
-    setLines((all) =>
-      all.map((line, i) => (i === index ? { ...line, ...patch } : line)),
-    );
+  const storeList = merchant ? (stores.data?.results ?? []) : [];
+  const onOrder = storeList.filter((store) => chosen.includes(store.id));
+  const activeStore = onOrder.find((store) => store.id === active) ?? onOrder[0];
 
-  const totalUnits = lines.reduce(
-    (sum, line) => (line.product ? sum + (line.quantity ?? 0) : sum),
-    0,
-  );
+  const rowsFor = (store: number) => rows.filter((row) => row.store === store);
+  const unitsFor = (store: number) =>
+    rowsFor(store).reduce((sum, row) => sum + (row.quantity ?? 0), 0);
+  const totalUnits = rows.reduce((sum, row) => sum + (row.quantity ?? 0), 0);
+  const emptyStores = onOrder.filter((store) => unitsFor(store.id) === 0);
+
+  /** Changing merchant invalidates every store choice made under the old one. */
+  function pickMerchant(next: number | null) {
+    setMerchant(next);
+    setChosen([]);
+    setRows([]);
+    setActive(null);
+  }
+
+  function toggleStore(id: number) {
+    setChosen((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
+    );
+    // Dropping a store takes its demand with it, so a hidden row cannot be
+    // submitted for a store no longer on the order.
+    setRows((current) =>
+      chosen.includes(id) ? current.filter((row) => row.store !== id) : current,
+    );
+  }
+
+  function fillEveryStore() {
+    if (!bulkProduct || !bulkQuantity || onOrder.length === 0) {
+      toast.error("Choose a product and a quantity first.");
+      return;
+    }
+    setRows((current) => {
+      const next = [...current];
+      for (const store of onOrder) {
+        const at = next.findIndex(
+          (row) => row.store === store.id && row.product === bulkProduct,
+        );
+        const row = {
+          store: store.id,
+          product: bulkProduct,
+          color: bulkColor.trim(),
+          quantity: bulkQuantity,
+        };
+        if (at >= 0) next[at] = row;
+        else next.push(row);
+      }
+      return next;
+    });
+    const label = catalogue.find((item) => item.id === bulkProduct)?.style_no;
+    toast.success(
+      `${label} × ${bulkQuantity} set on ${onOrder.length} store${onOrder.length === 1 ? "" : "s"}`,
+    );
+  }
+
+  function setRow(index: number, patch: Partial<Row>) {
+    setRows((current) =>
+      current.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+  }
 
   function submit() {
     const found: Record<string, string> = {};
     if (!name.trim()) found.name = "Required";
     if (!merchant) found.merchant = "Required";
+    if (onOrder.length === 0) found.stores = "Choose at least one store.";
 
-    const filled = lines.filter((line) => line.product !== null);
-    if (filled.length === 0) found.lines = "Add at least one product.";
+    const complete = rows.filter((row) => row.product !== null && row.quantity);
+    if (complete.length === 0) found.rows = "Give at least one store a product.";
+    else if (rows.some((row) => row.product === null || !row.quantity))
+      found.rows = "Every line needs a product and a quantity.";
 
-    const ids = filled.map((line) => line.product);
-    if (new Set(ids).size !== ids.length)
-      found.lines =
-        "Each product can appear only once. Change the quantity instead.";
-
-    if (filled.some((line) => !line.quantity))
-      found.lines = "Give every product a quantity.";
+    const keys = complete.map((row) => `${row.store}:${row.product}`);
+    if (new Set(keys).size !== keys.length)
+      found.rows = "A store lists the same product twice.";
 
     setErrors(found);
     if (Object.keys(found).length > 0) {
@@ -86,11 +146,11 @@ export default function NewDisplayOrderPage() {
         name,
         merchant,
         buyer_name: buyerName,
-        shipping_address: address,
-        lines: filled.map((line) => ({
-          product: line.product,
-          color: line.color.trim(),
-          quantity: line.quantity,
+        lines: complete.map((row) => ({
+          store: row.store,
+          product: row.product,
+          color: row.color.trim(),
+          quantity: row.quantity,
         })),
       },
       {
@@ -108,7 +168,7 @@ export default function NewDisplayOrderPage() {
 
   return (
     <main className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto max-w-3xl space-y-5 pb-10">
+      <div className="mx-auto max-w-5xl space-y-5 pb-10">
         <PageHeader
           title="New display order"
           description="The order number is generated on save."
@@ -137,7 +197,7 @@ export default function NewDisplayOrderPage() {
                   value={merchant ?? ""}
                   invalid={Boolean(errors.merchant)}
                   onChange={(event) =>
-                    setMerchant(
+                    pickMerchant(
                       event.target.value ? Number(event.target.value) : null,
                     )
                   }
@@ -162,163 +222,305 @@ export default function NewDisplayOrderPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Ship to</CardTitle>
+            <div>
+              <CardTitle>Stores on this order</CardTitle>
+              {errors.stores && (
+                <p className="mt-0.5 text-xs text-destructive">
+                  {errors.stores}
+                </p>
+              )}
+            </div>
+            {storeList.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setChosen(storeList.map((store) => store.id))}
+                >
+                  Select all
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setChosen([]);
+                    setRows([]);
+                  }}
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
           </CardHeader>
-          <CardBody className="space-y-4">
-            <Field label="Address line 1">
-              <Input
-                value={address.line1}
-                onChange={(event) =>
-                  setAddress({ ...address, line1: event.target.value })
-                }
-              />
-            </Field>
-            <Field label="Address line 2">
-              <Input
-                value={address.line2}
-                onChange={(event) =>
-                  setAddress({ ...address, line2: event.target.value })
-                }
-              />
-            </Field>
-            <FieldRow>
-              <Field label="City">
-                <Input
-                  value={address.city}
-                  onChange={(event) =>
-                    setAddress({ ...address, city: event.target.value })
-                  }
-                />
-              </Field>
-              <Field label="State">
-                <Input
-                  value={address.state}
-                  onChange={(event) =>
-                    setAddress({ ...address, state: event.target.value })
-                  }
-                />
-              </Field>
-              <Field label="Postal code">
-                <Input
-                  value={address.postal_code}
-                  onChange={(event) =>
-                    setAddress({ ...address, postal_code: event.target.value })
-                  }
-                />
-              </Field>
-            </FieldRow>
-            <Field label="Country" hint="Two-letter ISO code.">
-              <Input
-                maxLength={2}
-                value={address.country}
-                onChange={(event) =>
-                  setAddress({
-                    ...address,
-                    country: event.target.value.toUpperCase(),
-                  })
-                }
-                className="sm:w-24"
-              />
-            </Field>
+          <CardBody>
+            {!merchant ? (
+              <p className="text-xs text-muted-foreground">
+                Choose a merchant to see its stores.
+              </p>
+            ) : storeList.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                This merchant has no stores yet — add them under Admin → Stores.
+              </p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {storeList.map((store) => (
+                  <label
+                    key={store.id}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-xs",
+                      chosen.includes(store.id)
+                        ? "border-primary/40 bg-primary-subtle"
+                        : "border-border bg-card",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={chosen.includes(store.id)}
+                      onChange={() => toggleStore(store.id)}
+                      className="mt-0.5 size-4 accent-[var(--color-primary)]"
+                    />
+                    <span>
+                      <span className="tabular font-medium">{store.code}</span>{" "}
+                      {store.name}
+                      <span className="block text-muted-foreground">
+                        {[store.ship_city, store.ship_state]
+                          .filter(Boolean)
+                          .join(", ") || "no address"}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Products</CardTitle>
-              {errors.lines && (
-                <p className="mt-0.5 text-xs text-destructive">{errors.lines}</p>
-              )}
+        {onOrder.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>What each store wants</CardTitle>
+                {errors.rows && (
+                  <p className="mt-0.5 text-xs text-destructive">
+                    {errors.rows}
+                  </p>
+                )}
+              </div>
+            </CardHeader>
+
+            {/* Most stores usually take the same thing; this sets them all at
+                once, and the per-store editor below handles the exceptions. */}
+            <CardBody className="border-b border-border-subtle bg-secondary/30">
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label="Product" className="min-w-56 flex-1">
+                  <Select
+                    value={bulkProduct ?? ""}
+                    onChange={(event) =>
+                      setBulkProduct(
+                        event.target.value ? Number(event.target.value) : null,
+                      )
+                    }
+                  >
+                    <option value="">Choose a product</option>
+                    {catalogue.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.style_no} · {item.description}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Colour" className="w-36">
+                  <Input
+                    value={bulkColor}
+                    onChange={(event) => setBulkColor(event.target.value)}
+                  />
+                </Field>
+                <Field label="Qty each" className="w-28">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={bulkQuantity ?? ""}
+                    onChange={(event) =>
+                      setBulkQuantity(
+                        event.target.value === ""
+                          ? null
+                          : Number(event.target.value) || null,
+                      )
+                    }
+                    className="tabular text-right"
+                  />
+                </Field>
+                <Button variant="secondary" onClick={fillEveryStore}>
+                  Fill all {onOrder.length} stores
+                </Button>
+              </div>
+            </CardBody>
+
+            <div className="grid gap-0 lg:grid-cols-[16rem_1fr]">
+              <div className="border-b border-border-subtle lg:border-b-0 lg:border-r">
+                {onOrder.map((store) => {
+                  const units = unitsFor(store.id);
+                  return (
+                    <button
+                      key={store.id}
+                      onClick={() => setActive(store.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-2 border-b border-border-subtle px-4 py-2.5 text-left text-xs last:border-b-0",
+                        activeStore?.id === store.id
+                          ? "bg-primary-subtle"
+                          : "hover:bg-secondary/50",
+                      )}
+                    >
+                      <span>
+                        <span className="tabular font-medium">
+                          {store.code}
+                        </span>
+                        <span className="block text-muted-foreground">
+                          {store.name}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          "tabular shrink-0 font-semibold",
+                          units === 0 ? "text-warning" : "text-primary",
+                        )}
+                      >
+                        {units === 0 ? "empty" : format.integer(units)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div>
+                {activeStore && (
+                  <>
+                    <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2.5">
+                      <span className="text-xs font-medium">
+                        <span className="tabular">{activeStore.code}</span>{" "}
+                        {activeStore.name}
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          setRows([
+                            ...rows,
+                            {
+                              store: activeStore.id,
+                              product: null,
+                              color: "",
+                              quantity: null,
+                            },
+                          ])
+                        }
+                      >
+                        <Plus /> Add product
+                      </Button>
+                    </div>
+                    <Table>
+                      <THead>
+                        <tr>
+                          <TH>Product</TH>
+                          <TH className="w-36">Colour</TH>
+                          <TH className="w-24 text-right">Quantity</TH>
+                          <TH className="w-12" />
+                        </tr>
+                      </THead>
+                      <tbody>
+                        {rowsFor(activeStore.id).length === 0 && (
+                          <EmptyRow colSpan={4}>
+                            Nothing for this store yet.
+                          </EmptyRow>
+                        )}
+                        {rows.map((row, index) =>
+                          row.store !== activeStore.id ? null : (
+                            <TR key={index}>
+                              <TD>
+                                <Select
+                                  value={row.product ?? ""}
+                                  onChange={(event) =>
+                                    setRow(index, {
+                                      product: event.target.value
+                                        ? Number(event.target.value)
+                                        : null,
+                                    })
+                                  }
+                                >
+                                  <option value="">Choose a product</option>
+                                  {catalogue.map((item) => (
+                                    <option key={item.id} value={item.id}>
+                                      {item.style_no} · {item.description}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </TD>
+                              <TD>
+                                <Input
+                                  value={row.color}
+                                  onChange={(event) =>
+                                    setRow(index, { color: event.target.value })
+                                  }
+                                />
+                              </TD>
+                              <TD>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={row.quantity ?? ""}
+                                  onChange={(event) =>
+                                    setRow(index, {
+                                      quantity:
+                                        event.target.value === ""
+                                          ? null
+                                          : Number(event.target.value) || null,
+                                    })
+                                  }
+                                  className="tabular text-right"
+                                />
+                              </TD>
+                              <TD>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:bg-destructive-subtle"
+                                  onClick={() =>
+                                    setRows(rows.filter((_, i) => i !== index))
+                                  }
+                                >
+                                  <Trash2 />
+                                </Button>
+                              </TD>
+                            </TR>
+                          ),
+                        )}
+                      </tbody>
+                    </Table>
+                  </>
+                )}
+              </div>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setLines([...lines, BLANK_LINE])}
-            >
-              <Plus /> Add line
-            </Button>
-          </CardHeader>
-          <Table>
-            <THead>
-              <tr>
-                <TH>Product</TH>
-                <TH className="w-44">Colour</TH>
-                <TH className="w-28 text-right">Quantity</TH>
-                <TH className="w-12" />
-              </tr>
-            </THead>
-            <tbody>
-              {lines.length === 0 && <EmptyRow colSpan={4}>No lines yet.</EmptyRow>}
-              {lines.map((line, index) => (
-                <TR key={index}>
-                  <TD>
-                    <Select
-                      value={line.product ?? ""}
-                      onChange={(event) =>
-                        setLine(index, {
-                          product: event.target.value
-                            ? Number(event.target.value)
-                            : null,
-                        })
-                      }
-                    >
-                      <option value="">Choose a product</option>
-                      {catalogue.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.style_no} · {item.description}
-                        </option>
-                      ))}
-                    </Select>
-                  </TD>
-                  <TD>
-                    <Input
-                      value={line.color}
-                      onChange={(event) =>
-                        setLine(index, { color: event.target.value })
-                      }
-                    />
-                  </TD>
-                  <TD>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={line.quantity ?? ""}
-                      onChange={(event) =>
-                        setLine(index, {
-                          quantity:
-                            event.target.value === ""
-                              ? null
-                              : Number(event.target.value) || null,
-                        })
-                      }
-                      className="tabular text-right"
-                    />
-                  </TD>
-                  <TD>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive-subtle"
-                      onClick={() =>
-                        setLines(lines.filter((_, i) => i !== index))
-                      }
-                    >
-                      <Trash2 />
-                    </Button>
-                  </TD>
-                </TR>
-              ))}
-            </tbody>
-          </Table>
-          <CardBody className="border-t border-border-subtle bg-secondary/30 text-xs text-muted-foreground">
-            <span className="tabular font-semibold text-foreground">
-              {format.integer(totalUnits)}
-            </span>{" "}
-            units. How many cartons that becomes is decided on the packing
-            screen, by applying templates until nothing is left.
-          </CardBody>
-        </Card>
+
+            <CardBody className="border-t border-border-subtle bg-secondary/30 text-xs text-muted-foreground">
+              <span className="tabular font-semibold text-foreground">
+                {format.integer(totalUnits)}
+              </span>{" "}
+              units across{" "}
+              <span className="tabular font-semibold text-foreground">
+                {onOrder.length - emptyStores.length}
+              </span>{" "}
+              of {onOrder.length} stores
+              {emptyStores.length > 0 && (
+                <span className="text-warning">
+                  {" "}
+                  · {emptyStores.length} still empty (
+                  {emptyStores.map((store) => store.code).join(", ")})
+                </span>
+              )}
+              .
+            </CardBody>
+          </Card>
+        )}
 
         <div className="flex items-center justify-end gap-2">
           <Button

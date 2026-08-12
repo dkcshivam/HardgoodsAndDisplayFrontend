@@ -327,8 +327,12 @@ export interface PackTemplate {
   created_at: string;
 }
 
+/** What one store wants, of one product. Stores need not share a product mix. */
 export interface DisplayOrderLine {
   id: number;
+  store: number;
+  store_code: string;
+  store_name: string;
   product: number;
   product_style_no: string;
   product_description: string;

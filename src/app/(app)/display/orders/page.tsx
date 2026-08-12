@@ -79,7 +79,7 @@ export default function DisplayOrdersPage() {
               <tr>
                 <TH>Order</TH>
                 <TH>Merchant</TH>
-                <TH>Ship to</TH>
+                <TH>Stores</TH>
                 <TH className="text-right">Lines</TH>
                 <TH className="text-right">Ordered</TH>
                 <TH className="text-right">Cartons</TH>
@@ -107,6 +107,9 @@ export default function DisplayOrdersPage() {
                   (sum, line) => sum + line.quantity,
                   0,
                 );
+                const storeCount = new Set(
+                  order.lines.map((line) => line.store),
+                ).size;
                 const unpacked =
                   order.carton_count === 0 && order.status !== "draft";
                 return (
@@ -126,12 +129,9 @@ export default function DisplayOrdersPage() {
                       {order.merchant_name}
                     </TD>
                     <TD className="text-secondary-foreground">
-                      {[
-                        order.shipping_address.city,
-                        order.shipping_address.country,
-                      ]
-                        .filter(Boolean)
-                        .join(", ") || "—"}
+                      {storeCount === 0
+                        ? "—"
+                        : `${storeCount} store${storeCount === 1 ? "" : "s"}`}
                     </TD>
                     <TD className="tabular text-right">{order.lines.length}</TD>
                     <TD className="tabular text-right">
