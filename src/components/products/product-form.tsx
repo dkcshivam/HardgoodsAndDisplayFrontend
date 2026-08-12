@@ -393,7 +393,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 value={form.style_no}
                 invalid={Boolean(errors.style_no)}
                 onChange={(event) => set({ style_no: event.target.value })}
-                placeholder="DKC-TBL-OAK-01"
                 className="tabular"
               />
             </Field>
@@ -408,7 +407,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 value={form.description}
                 invalid={Boolean(errors.description)}
                 onChange={(event) => set({ description: event.target.value })}
-                placeholder="Oak Dining Table"
               />
             </Field>
 
@@ -537,14 +535,12 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                     onChange={(event) =>
                       set({ customs_description: event.target.value })
                     }
-                    placeholder="Wooden Dining Chair"
                   />
                 </Field>
                 <Field label="HSN code" hint="Determines duty classification.">
                   <Input
                     value={form.hsn_code}
                     onChange={(event) => set({ hsn_code: event.target.value })}
-                    placeholder="9401.61"
                     className="tabular sm:w-40"
                   />
                 </Field>

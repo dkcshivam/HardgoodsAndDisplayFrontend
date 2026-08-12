@@ -164,7 +164,6 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
                   value={draft.style_no}
                   invalid={Boolean(errors.style_no)}
                   onChange={(event) => set({ style_no: event.target.value })}
-                  placeholder="DSP-WRT-24"
                   className="tabular"
                 />
               </Field>
@@ -190,7 +189,6 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
                 value={draft.description}
                 invalid={Boolean(errors.description)}
                 onChange={(event) => set({ description: event.target.value })}
-                placeholder={'24" Pine Wreath'}
               />
             </Field>
 
@@ -272,14 +270,12 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
                 onChange={(event) =>
                   set({ customs_description: event.target.value })
                 }
-                placeholder="Artificial Foliage Wreath"
               />
             </Field>
             <Field label="HSN code">
               <Input
                 value={draft.hsn_code}
                 onChange={(event) => set({ hsn_code: event.target.value })}
-                placeholder="8507.60"
                 className="tabular sm:w-40"
               />
             </Field>

@@ -125,7 +125,6 @@ export default function NewOrderPage() {
                 value={name}
                 invalid={Boolean(errors.name)}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="UO Fall Dining Refresh"
               />
             </Field>
 
@@ -169,7 +168,6 @@ export default function NewOrderPage() {
                 onChange={(event) =>
                   setAddress({ ...address, line1: event.target.value })
                 }
-                placeholder="5000 South Broad St"
               />
             </Field>
             <Field label="Address line 2">

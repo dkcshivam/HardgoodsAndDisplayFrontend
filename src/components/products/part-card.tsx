@@ -101,14 +101,12 @@ export function PartCard({
               <Input
                 value={part.name}
                 onChange={(event) => onChange({ name: event.target.value })}
-                placeholder="Table top"
               />
             </Field>
             <Field label="Description">
               <Input
                 value={part.description}
                 onChange={(event) => onChange({ description: event.target.value })}
-                placeholder="Oak table top, foam-wrapped"
               />
             </Field>
           </FieldRow>
@@ -123,14 +121,12 @@ export function PartCard({
                 onChange={(event) =>
                   onChange({ customs_description: event.target.value })
                 }
-                placeholder="Wooden Table Top"
               />
             </Field>
             <Field label="HSN code" hint="Parts can classify differently.">
               <Input
                 value={part.hsn_code}
                 onChange={(event) => onChange({ hsn_code: event.target.value })}
-                placeholder="9403.30"
               />
             </Field>
           </FieldRow>

@@ -170,7 +170,6 @@ function CategoryDialog({
               onChange={(event) =>
                 setForm({ ...form, name: event.target.value })
               }
-              placeholder="Table"
             />
           </Field>
           <Field label="Status">

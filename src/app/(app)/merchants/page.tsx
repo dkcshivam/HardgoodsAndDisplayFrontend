@@ -197,14 +197,12 @@ function MerchantDialog({
               <Input
                 value={form.code ?? ""}
                 onChange={(event) => set({ code: event.target.value })}
-                placeholder="UO"
               />
             </Field>
             <Field label="Name" required>
               <Input
                 value={form.name ?? ""}
                 onChange={(event) => set({ name: event.target.value })}
-                placeholder="Urban Outfitters Inc"
               />
             </Field>
           </FieldRow>
@@ -246,7 +244,6 @@ function MerchantDialog({
                 onChange={(event) =>
                   set({ country: event.target.value.toUpperCase() })
                 }
-                placeholder="US"
               />
             </Field>
           </FieldRow>

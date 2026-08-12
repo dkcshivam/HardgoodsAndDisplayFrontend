@@ -96,7 +96,6 @@ export function DisplayPartCard({
               <Input
                 value={part.name}
                 onChange={(event) => onChange({ name: event.target.value })}
-                placeholder="Wreath frame"
               />
             </Field>
             <Field label="Description">

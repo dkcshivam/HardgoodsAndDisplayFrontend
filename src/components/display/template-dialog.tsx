@@ -356,7 +356,6 @@ export function TemplateDialog({
                 value={draft.code}
                 invalid={Boolean(errors.code)}
                 onChange={(event) => set({ code: event.target.value })}
-                placeholder="TPL-005"
                 className="tabular"
               />
             </Field>
@@ -370,7 +369,6 @@ export function TemplateDialog({
                 value={draft.name}
                 invalid={Boolean(errors.name)}
                 onChange={(event) => set({ name: event.target.value })}
-                placeholder="30 bows + 5 wreaths"
               />
             </Field>
           </FieldRow>
@@ -433,7 +431,6 @@ export function TemplateDialog({
             <Textarea
               value={draft.remark}
               onChange={(event) => set({ remark: event.target.value })}
-              placeholder="Anything the floor needs to know about packing this box."
               className="min-h-16"
             />
           </Field>
