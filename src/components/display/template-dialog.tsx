@@ -32,6 +32,8 @@ interface PieceRow {
   product: number;
   part: number | null;
   label: string;
+  /** Searched alongside the label, so "garden arch" finds DSP-ARC-84. */
+  description: string;
   /** Set only when designing against an order's remaining demand. */
   before?: number;
 }
@@ -127,13 +129,17 @@ export function TemplateDialog({
         product: row.product,
         part: row.part,
         label: pieceLabel(row.style_no, row.part_name),
+        description: row.description,
         before: row.quantity,
       }))
     : catalogRows(catalogue, template);
 
-  const query = pieceSearch.trim().toLowerCase();
-  const visibleRows = query
-    ? candidateRows.filter((row) => row.label.toLowerCase().includes(query))
+  const terms = searchTerms(pieceSearch);
+  const visibleRows = terms.length
+    ? candidateRows.filter((row) => {
+        const haystack = normalize(`${row.label} ${row.description}`);
+        return terms.every((term) => haystack.includes(term));
+      })
     : candidateRows;
 
   const productOf = (id: number) => catalogue.find((p) => p.id === id);
@@ -305,10 +311,12 @@ export function TemplateDialog({
                 No piece matches &ldquo;{pieceSearch.trim()}&rdquo;.
               </p>
             ) : (
-              <div className="overflow-hidden rounded-lg border border-border">
+              // Capped so the box dimensions and weights below stay reachable
+              // without scrolling past a catalogue of a hundred pieces.
+              <div className="max-h-64 overflow-y-auto rounded-lg border border-border">
                 <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border-subtle bg-secondary/40 text-muted-foreground">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="border-b border-border-subtle bg-secondary text-muted-foreground">
                       <th className="px-3 py-2 text-left font-medium">Piece</th>
                       {remaining && (
                         <th className="px-3 py-2 text-right font-medium">
@@ -558,6 +566,20 @@ function pieceLabel(styleNo: string, partName: string): string {
 }
 
 /**
+ * Style numbers are punctuated ("DSP-ARC-84") and labels carry an em dash, so
+ * a plain substring match fails on anything typed with spaces. Flattening
+ * every separator to one lets "dsp arc" and "DSP-ARC-84" find the same row.
+ */
+function normalize(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/** Every term has to match, so extra words narrow rather than widen. */
+function searchTerms(search: string): string[] {
+  return normalize(search).split(" ").filter(Boolean);
+}
+
+/**
  * The full active catalogue, one row per piece — a whole product, or every
  * part of a multi-part one. Falls back to a saved template's own item labels
  * for a piece the active catalogue no longer lists (its product deactivated
@@ -570,8 +592,16 @@ function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): Piec
           product: product.id,
           part: part.id,
           label: pieceLabel(product.style_no, part.name),
+          description: part.description || product.description,
         }))
-      : [{ product: product.id, part: null, label: product.style_no }],
+      : [
+          {
+            product: product.id,
+            part: null,
+            label: product.style_no,
+            description: product.description,
+          },
+        ],
   );
 
   if (template) {
@@ -583,6 +613,7 @@ function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): Piec
           product: item.product,
           part: item.part,
           label: pieceLabel(item.product_style_no, item.part_name),
+          description: "",
         });
         known.add(key);
       }
