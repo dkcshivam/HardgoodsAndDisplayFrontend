@@ -25,12 +25,14 @@ import {
   useDisplayOrder,
   useDisplayOrderAction,
   useDisplayPackingPlan,
+  useRemove,
 } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
 import { format, pieceKey } from "@/lib/calc";
 import { cn } from "@/lib/utils";
 import type {
   Adjustment,
+  ApplicableTemplate,
   QuantityRow,
   StoreProgress,
   TemplateContent,
@@ -58,7 +60,11 @@ export default function DisplayPackingPage({
     advance,
   } = useDisplayOrderAction(orderId, store);
 
+  const removeTemplate = useRemove("pack-templates");
+
   const [dropping, setDropping] = useState<number | null>(null);
+  const [droppingTemplate, setDroppingTemplate] =
+    useState<ApplicableTemplate | null>(null);
   const [authoring, setAuthoring] = useState(false);
   const [inspecting, setInspecting] = useState<number | null>(null);
 
@@ -291,7 +297,7 @@ export default function DisplayPackingPage({
                       <TH>Each box holds</TH>
                       <TH className="w-24 text-center">Units/box</TH>
                       <TH className="w-20 text-center">Fits</TH>
-                      <TH className="w-28" />
+                      <TH className="w-40" />
                     </tr>
                   </THead>
                   <tbody>
@@ -314,20 +320,31 @@ export default function DisplayPackingPage({
                         <TD className="tabular text-center font-semibold text-primary">
                           {template.capacity}×
                         </TD>
-                        <TD className="text-right">
-                          <Button
-                            size="sm"
-                            disabled={busy}
-                            onClick={() =>
-                              apply(
-                                template.template,
-                                template.code,
-                                template.capacity,
-                              )
-                            }
-                          >
-                            Apply {template.capacity}×
-                          </Button>
+                        <TD>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              disabled={busy}
+                              onClick={() =>
+                                apply(
+                                  template.template,
+                                  template.code,
+                                  template.capacity,
+                                )
+                              }
+                            >
+                              Apply {template.capacity}×
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={busy}
+                              className="text-destructive hover:bg-destructive-subtle"
+                              onClick={() => setDroppingTemplate(template)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
                         </TD>
                       </TR>
                     ))}
@@ -614,6 +631,35 @@ export default function DisplayPackingPage({
                 error instanceof ApiError
                   ? error.detail
                   : "Could not drop the step",
+              );
+            },
+          });
+        }}
+      />
+
+      {/* A design outlives the order it was written on, so deleting one here
+          takes it off every order — the server refuses if any has packed it. */}
+      <ConfirmDialog
+        open={droppingTemplate !== null}
+        onOpenChange={(next) => !next && setDroppingTemplate(null)}
+        title={`Delete ${droppingTemplate?.code ?? ""}?`}
+        message="This box design is removed from every order that could use it. A design already packed into cartons is kept instead."
+        busy={removeTemplate.isPending}
+        onConfirm={() => {
+          const target = droppingTemplate;
+          if (!target) return;
+          removeTemplate.mutate(target.template, {
+            onSuccess: () => {
+              toast.success(`${target.code} deleted`);
+              setDroppingTemplate(null);
+              plan.refetch();
+            },
+            onError: (error) => {
+              setDroppingTemplate(null);
+              toast.error(
+                error instanceof ApiError
+                  ? error.detail
+                  : "Could not delete this design",
               );
             },
           });
