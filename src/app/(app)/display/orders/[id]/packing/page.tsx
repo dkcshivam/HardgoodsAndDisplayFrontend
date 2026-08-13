@@ -216,8 +216,6 @@ export default function DisplayPackingPage({
             </Card>
           ) : (
             <>
-          <ReconciliationBar rows={data.reconciliation} />
-
           {/* ── 1 ─────────────────────────────────────────────────── */}
           <section>
             <StepHeading
@@ -229,12 +227,8 @@ export default function DisplayPackingPage({
               }
               done={done}
             />
-            <Card
-              className={
-                done ? "border-success/25 bg-success-subtle" : "border-warning/30"
-              }
-            >
-              {done ? (
+            {done ? (
+              <Card className="border-success/25 bg-success-subtle">
                 <CardBody>
                   <p className="text-sm text-success">
                     Every ordered unit is inside a carton and the counts agree.
@@ -242,33 +236,12 @@ export default function DisplayPackingPage({
                       " Mark the order packed when you are ready."}
                   </p>
                 </CardBody>
-              ) : (
-                <Table>
-                  <THead>
-                    <tr>
-                      <TH>Product</TH>
-                      <TH>Description</TH>
-                      <TH className="w-28 text-right">Remaining</TH>
-                    </tr>
-                  </THead>
-                  <tbody>
-                    {data.remaining.map((row) => (
-                      <TR key={pieceKey(row)}>
-                        <TD className="tabular font-medium">
-                          {pieceLabel(row)}
-                        </TD>
-                        <TD className="text-secondary-foreground">
-                          {row.description}
-                        </TD>
-                        <TD className="tabular text-right font-semibold text-warning">
-                          {format.integer(row.quantity)}
-                        </TD>
-                      </TR>
-                    ))}
-                  </tbody>
-                </Table>
-              )}
-            </Card>
+              </Card>
+            ) : (
+              // Whole products, not pieces — which part of one is short is the
+              // box design's business, and the template dialog spells it out.
+              <ReconciliationBar rows={data.reconciliation} />
+            )}
           </section>
 
           {/* ── 2 ─────────────────────────────────────────────────── */}
