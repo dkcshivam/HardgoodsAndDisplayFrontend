@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge, StatusBadge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/badge";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { DialogRoot, DialogContent, DialogBody } from "@/components/ui/dialog";
@@ -411,30 +411,14 @@ export default function DisplayPackingPage({
                           </button>
                         </TD>
                         <TD>
-                          <div className="flex flex-wrap gap-1">
-                            {step.consumed.map((row) => (
-                              <Badge key={pieceKey(row)} tone="info">
-                                <span className="tabular">{row.quantity}</span>
-                                {pieceLabel(row)}
-                              </Badge>
-                            ))}
-                          </div>
+                          <PieceTable rows={step.consumed} tone="primary" />
                         </TD>
                         <TD>
-                          {step.remaining_after.length === 0 ? (
-                            <span className="text-xs text-success">nothing</span>
-                          ) : (
-                            <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                              {step.remaining_after.map((row) => (
-                                <span
-                                  key={pieceKey(row)}
-                                  className="tabular text-xs text-muted-foreground"
-                                >
-                                  {row.quantity} {pieceLabel(row)}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          <PieceTable
+                            rows={step.remaining_after}
+                            tone="muted"
+                            empty="nothing"
+                          />
                         </TD>
                         <TD>
                           <div className="flex items-center justify-end gap-1.5">
@@ -586,7 +570,7 @@ export default function DisplayPackingPage({
               {format.integer(
                 data.stores.reduce((sum, row) => sum + row.remaining, 0),
               )}{" "}
-              units still to pack across{" "}
+              pieces still to pack across{" "}
               {data.stores.filter((row) => !row.is_done).length} store
               {data.stores.filter((row) => !row.is_done).length === 1 ? "" : "s"}
             </span>
@@ -673,6 +657,9 @@ function StorePicker({
               ? `All ${stores.length} packed.`
               : `${left} of ${stores.length} still need packing.`}
           </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+            Pieces — a multi-part product counts each part on its own.
+          </p>
         </div>
         {active !== null && (
           <Button variant="secondary" size="sm" onClick={() => onPick(null)}>
@@ -708,7 +695,7 @@ function StorePicker({
             </div>
             <div className="truncate text-muted-foreground">{row.store_name}</div>
             <div className="tabular mt-0.5 text-muted-foreground">
-              {format.integer(row.packed)}/{format.integer(row.ordered)} units ·{" "}
+              {format.integer(row.packed)}/{format.integer(row.ordered)} pieces ·{" "}
               {format.integer(row.carton_count)} carton
               {row.carton_count === 1 ? "" : "s"}
             </div>
@@ -747,11 +734,50 @@ function StepHeading({
 }
 
 /**
- * A product's parts are counted separately, so a chip names the part as well
+ * A product's parts are counted separately, so a row names the part as well
  * — "8 DSP-TBL-01" would not say which of the two is still loose.
  */
 function pieceLabel(row: QuantityRow): string {
   return row.part_name ? `${row.style_no} — ${row.part_name}` : row.style_no;
+}
+
+/**
+ * A step can touch several pieces at once, so wrapped chips ran together —
+ * one row per piece, quantity lined up on its own column, reads at a glance.
+ */
+function PieceTable({
+  rows,
+  tone,
+  empty,
+}: {
+  rows: QuantityRow[];
+  tone: "primary" | "muted";
+  empty?: string;
+}) {
+  if (rows.length === 0) {
+    return empty ? <span className="text-xs text-success">{empty}</span> : null;
+  }
+  return (
+    <table className="w-full text-xs">
+      <tbody>
+        {rows.map((row) => (
+          <tr key={pieceKey(row)}>
+            <td
+              className={cn(
+                "py-0.5 pr-2 text-right tabular font-medium",
+                tone === "primary" ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              {row.quantity}
+            </td>
+            <td className="py-0.5 text-secondary-foreground">
+              {pieceLabel(row)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 /** The drill-down. Cartons are paginated, so they never load with the plan. */
