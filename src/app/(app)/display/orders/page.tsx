@@ -74,17 +74,17 @@ export default function DisplayOrdersPage() {
         </div>
 
         <Card>
-          <Table>
+          <Table className="table-fixed">
             <THead>
               <tr>
-                <TH>Order</TH>
-                <TH>Merchant</TH>
-                <TH>Stores</TH>
-                <TH className="text-right">Units ordered</TH>
-                <TH className="text-right">Cartons</TH>
-                <TH>Status</TH>
-                <TH>Created</TH>
-                <TH />
+                <TH className="w-[20%]">Order</TH>
+                <TH className="w-[14%]">Merchant</TH>
+                <TH className="w-[11%]">Stores</TH>
+                <TH className="w-[13%] text-center">Units ordered</TH>
+                <TH className="w-[10%] text-center">Cartons</TH>
+                <TH className="w-[11%]">Status</TH>
+                <TH className="w-[12%]">Created</TH>
+                <TH className="w-[9%]" />
               </tr>
             </THead>
             <tbody>
@@ -120,11 +120,11 @@ export default function DisplayOrdersPage() {
                       >
                         {order.number}
                       </Link>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="truncate text-xs text-muted-foreground">
                         {order.name}
                       </div>
                     </TD>
-                    <TD className="text-secondary-foreground">
+                    <TD className="truncate text-secondary-foreground">
                       {order.merchant_name}
                     </TD>
                     <TD className="text-secondary-foreground">
@@ -132,12 +132,12 @@ export default function DisplayOrdersPage() {
                         ? "—"
                         : `${storeCount} store${storeCount === 1 ? "" : "s"}`}
                     </TD>
-                    <TD className="tabular text-right">
+                    <TD className="tabular text-center">
                       {format.integer(ordered)}
                     </TD>
-                    <TD className="tabular text-right">
+                    <TD className="tabular text-center">
                       {unpacked ? (
-                        <span className="inline-flex items-center gap-1 text-warning">
+                        <span className="inline-flex items-center justify-center gap-1 text-warning">
                           <AlertTriangle className="size-3.5" />0
                         </span>
                       ) : (
