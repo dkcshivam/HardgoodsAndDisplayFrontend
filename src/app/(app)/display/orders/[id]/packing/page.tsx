@@ -29,12 +29,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { format, pieceKey } from "@/lib/calc";
 import { cn } from "@/lib/utils";
-import type {
-  Adjustment,
-  PackStepRow,
-  QuantityRow,
-  StoreProgress,
-} from "@/types";
+import type { Adjustment, QuantityRow, StoreProgress } from "@/types";
 
 export default function DisplayPackingPage({
   params,
@@ -52,7 +47,6 @@ export default function DisplayPackingPage({
   const plan = useDisplayPackingPlan(orderId, store);
   const {
     applyStep,
-    recountStep,
     deleteStep,
     replicatePlan,
     downloadPackingList,
@@ -91,7 +85,6 @@ export default function DisplayPackingPage({
   // buttons, and a second click lands on whatever has re-sorted into place.
   const busy =
     applyStep.isPending ||
-    recountStep.isPending ||
     deleteStep.isPending ||
     replicatePlan.isPending ||
     plan.isFetching;
@@ -106,13 +99,15 @@ export default function DisplayPackingPage({
     }
   }
 
-  function apply(template: number, code: string) {
+  function apply(template: number, code: string, capacity: number) {
     if (store === null) return;
     applyStep.mutate(
-      { template, store, count: 1 },
+      { template, store, count: capacity },
       {
         onSuccess: () => {
-          toast.success(`${code} applied — 1 carton added`);
+          toast.success(
+            `${code} applied — ${capacity} carton${capacity === 1 ? "" : "s"} added`,
+          );
         },
         onError: (error) =>
           toast.error(
@@ -123,28 +118,6 @@ export default function DisplayPackingPage({
       },
     );
   }
-
-  function bulkApply(step: PackStepRow, total: number) {
-    recountStep.mutate(
-      { sequence: step.sequence, count: total },
-      {
-        onSuccess: (updated) => {
-          report(updated.adjustments);
-          toast.success(`Step ${step.sequence} set to ${total}×`);
-        },
-        onError: (error) =>
-          toast.error(
-            error instanceof ApiError
-              ? error.detail
-              : "Could not fill out this step",
-          ),
-      },
-    );
-  }
-
-  const remainingMap = new Map(
-    data.remaining.map((row) => [pieceKey(row), row.quantity]),
-  );
 
   return (
     <>
@@ -328,8 +301,7 @@ export default function DisplayPackingPage({
                   <div>
                     <CardTitle>Box designs that fit what is left</CardTitle>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Applying adds one carton. To fill out to what fits, use
-                      Apply ×N on that step in the plan below.
+                      Applying fills out every carton this design still fits.
                     </p>
                   </div>
                 </CardHeader>
@@ -364,9 +336,15 @@ export default function DisplayPackingPage({
                           <Button
                             size="sm"
                             disabled={busy}
-                            onClick={() => apply(template.template, template.code)}
+                            onClick={() =>
+                              apply(
+                                template.template,
+                                template.code,
+                                template.capacity,
+                              )
+                            }
                           >
-                            Apply
+                            Apply {template.capacity}×
                           </Button>
                         </TD>
                       </TR>
@@ -411,9 +389,7 @@ export default function DisplayPackingPage({
                       Nothing packed yet. Apply a box design above to start.
                     </EmptyRow>
                   )}
-                  {data.steps.map((step) => {
-                    const growth = stepGrowth(step, remainingMap);
-                    return (
+                  {data.steps.map((step) => (
                       <TR key={step.sequence}>
                         <TD className="tabular text-muted-foreground">
                           {step.sequence}
@@ -462,16 +438,6 @@ export default function DisplayPackingPage({
                         </TD>
                         <TD>
                           <div className="flex items-center justify-end gap-1.5">
-                            {growth.extra > 0 && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                disabled={busy}
-                                onClick={() => bulkApply(step, growth.total)}
-                              >
-                                Apply {growth.total}×
-                              </Button>
-                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -484,8 +450,7 @@ export default function DisplayPackingPage({
                           </div>
                         </TD>
                       </TR>
-                    );
-                  })}
+                  ))}
                 </tbody>
               </Table>
               {data.steps.length > 0 && (
@@ -787,29 +752,6 @@ function StepHeading({
  */
 function pieceLabel(row: QuantityRow): string {
   return row.part_name ? `${row.style_no} — ${row.part_name}` : row.style_no;
-}
-
-/**
- * How far a step could still grow: per piece, how much more `remaining`
- * allows at this step's own per-application rate, capped by the tightest one.
- */
-function stepGrowth(
-  step: PackStepRow,
-  remainingMap: Map<string, number>,
-): { extra: number; total: number } {
-  if (step.consumed.length === 0) return { extra: 0, total: step.count };
-  const extra = Math.max(
-    0,
-    Math.min(
-      ...step.consumed.map((row) => {
-        const perApplication = row.quantity / step.count;
-        return Math.floor(
-          (remainingMap.get(pieceKey(row)) ?? 0) / perApplication,
-        );
-      }),
-    ),
-  );
-  return { extra, total: step.count + extra };
 }
 
 /** The drill-down. Cartons are paginated, so they never load with the plan. */
