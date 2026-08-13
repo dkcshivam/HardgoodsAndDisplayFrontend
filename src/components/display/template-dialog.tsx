@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input, Textarea } from "@/components/ui/input";
 import { Field, FieldRow } from "@/components/ui/field";
+import { SearchInput } from "@/components/ui/search-input";
 import { useToast } from "@/components/ui/toast";
 import { useDisplayProducts, useSave } from "@/lib/queries";
 import {
@@ -99,10 +100,12 @@ export function TemplateDialog({
   // Hides the "Fits N×" line while a qty is mid-edit, so it doesn't flicker
   // through half-typed numbers — it settles once you tab or click away.
   const [typingRow, setTypingRow] = useState<string | null>(null);
+  const [pieceSearch, setPieceSearch] = useState("");
   if (open && (!everOpen || subject !== (template?.id ?? null))) {
     setSubject(template?.id ?? null);
     setDraft(seed(template));
     setErrors({});
+    setPieceSearch("");
   }
   if (everOpen !== open) setEverOpen(open);
 
@@ -127,6 +130,11 @@ export function TemplateDialog({
         before: row.quantity,
       }))
     : catalogRows(catalogue, template);
+
+  const query = pieceSearch.trim().toLowerCase();
+  const visibleRows = query
+    ? candidateRows.filter((row) => row.label.toLowerCase().includes(query))
+    : candidateRows;
 
   const productOf = (id: number) => catalogue.find((p) => p.id === id);
 
@@ -244,44 +252,57 @@ export function TemplateDialog({
       >
         <DialogBody className="space-y-4">
           <div>
-            <div className="mb-1.5 flex items-center justify-between">
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-medium text-secondary-foreground">
                 What goes in the box
               </span>
-              {fits !== null && filled.length > 0 && typingRow === null && (
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 text-xs font-semibold",
-                    fits === 0
-                      ? "text-warning"
-                      : leavesSomething
+              <div className="flex items-center gap-3">
+                {candidateRows.length > 6 && (
+                  <SearchInput
+                    value={pieceSearch}
+                    onChange={setPieceSearch}
+                    placeholder="Search pieces…"
+                  />
+                )}
+                {fits !== null && filled.length > 0 && typingRow === null && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 text-xs font-semibold",
+                      fits === 0
                         ? "text-warning"
-                        : "text-success",
-                  )}
-                >
-                  {fits === 0 ? (
-                    <>
-                      <TriangleAlert className="size-3.5" />
-                      Doesn&rsquo;t fit yet
-                    </>
-                  ) : leavesSomething ? (
-                    <>
-                      <TriangleAlert className="size-3.5" />
-                      Fits {fits}× — leaves some behind
-                    </>
-                  ) : (
-                    <>
-                      <Check className="size-3.5" />
-                      Fits {fits}× — uses every one
-                    </>
-                  )}
-                </span>
-              )}
+                        : leavesSomething
+                          ? "text-warning"
+                          : "text-success",
+                    )}
+                  >
+                    {fits === 0 ? (
+                      <>
+                        <TriangleAlert className="size-3.5" />
+                        Doesn&rsquo;t fit yet
+                      </>
+                    ) : leavesSomething ? (
+                      <>
+                        <TriangleAlert className="size-3.5" />
+                        Fits {fits}× — leaves some behind
+                      </>
+                    ) : (
+                      <>
+                        <Check className="size-3.5" />
+                        Fits {fits}× — uses every one
+                      </>
+                    )}
+                  </span>
+                )}
+              </div>
             </div>
 
             {candidateRows.length === 0 ? (
               <p className="rounded-md border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
                 No active display products yet — add one first.
+              </p>
+            ) : visibleRows.length === 0 ? (
+              <p className="rounded-md border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
+                No piece matches &ldquo;{pieceSearch.trim()}&rdquo;.
               </p>
             ) : (
               <div className="overflow-hidden rounded-lg border border-border">
@@ -305,7 +326,7 @@ export function TemplateDialog({
                     </tr>
                   </thead>
                   <tbody>
-                    {candidateRows.map((row) => {
+                    {visibleRows.map((row) => {
                       const key = pieceKey(row);
                       const quantity = draft.quantities[key] ?? 0;
                       const after = afterQuantity(row, quantity);
