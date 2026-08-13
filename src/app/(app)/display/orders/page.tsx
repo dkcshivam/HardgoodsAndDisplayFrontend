@@ -80,8 +80,7 @@ export default function DisplayOrdersPage() {
                 <TH>Order</TH>
                 <TH>Merchant</TH>
                 <TH>Stores</TH>
-                <TH className="text-right">Lines</TH>
-                <TH className="text-right">Ordered</TH>
+                <TH className="text-right">Units ordered</TH>
                 <TH className="text-right">Cartons</TH>
                 <TH>Status</TH>
                 <TH>Created</TH>
@@ -89,16 +88,16 @@ export default function DisplayOrdersPage() {
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={9}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={8}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={9}>
+                <EmptyRow colSpan={8}>
                   <span className="text-destructive">
                     Could not load display orders.
                   </span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={9}>
+                <EmptyRow colSpan={8}>
                   No display orders match these filters.
                 </EmptyRow>
               )}
@@ -133,7 +132,6 @@ export default function DisplayOrdersPage() {
                         ? "—"
                         : `${storeCount} store${storeCount === 1 ? "" : "s"}`}
                     </TD>
-                    <TD className="tabular text-right">{order.lines.length}</TD>
                     <TD className="tabular text-right">
                       {format.integer(ordered)}
                     </TD>
