@@ -115,12 +115,24 @@ export default function PackTemplatesPage() {
                     </div>
                   </TD>
                   <TD>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="space-y-0.5">
                       {template.items.map((item) => (
-                        <Badge key={item.id} tone="info">
-                          <span className="tabular">{item.quantity}×</span>
-                          {item.product_style_no}
-                        </Badge>
+                        <div key={item.id} className="text-xs">
+                          <span className="tabular font-medium text-primary">
+                            {item.quantity}×
+                          </span>{" "}
+                          <span className="tabular">
+                            {item.product_style_no}
+                          </span>
+                          {/* Two parts of one product are two rows that would
+                              otherwise read as the same style number twice. */}
+                          {item.part_name && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              — {item.part_name}
+                            </span>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </TD>

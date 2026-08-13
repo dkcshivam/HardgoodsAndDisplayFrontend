@@ -442,6 +442,13 @@ export interface StoreProgress {
   is_done: boolean;
 }
 
+/** One piece a box design takes, and how many of it per box. */
+export interface TemplateContent {
+  style_no: string;
+  part_name: string;
+  quantity: number;
+}
+
 export interface ApplicableTemplate {
   template: number;
   code: string;
@@ -449,6 +456,7 @@ export interface ApplicableTemplate {
   /** How many times it fits what is left, right now. */
   capacity: number;
   units_per_carton: number;
+  contents: TemplateContent[];
 }
 
 export type WarningCode = "template_capacity_exceeded" | "poor_fill";

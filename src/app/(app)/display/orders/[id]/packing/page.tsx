@@ -29,7 +29,12 @@ import {
 import { ApiError } from "@/lib/api";
 import { format, pieceKey } from "@/lib/calc";
 import { cn } from "@/lib/utils";
-import type { Adjustment, QuantityRow, StoreProgress } from "@/types";
+import type {
+  Adjustment,
+  QuantityRow,
+  StoreProgress,
+  TemplateContent,
+} from "@/types";
 
 export default function DisplayPackingPage({
   params,
@@ -283,9 +288,10 @@ export default function DisplayPackingPage({
                   <THead>
                     <tr>
                       <TH>Design</TH>
-                      <TH className="w-28 text-right">Units/box</TH>
-                      <TH className="w-20 text-right">Fits</TH>
-                      <TH className="w-24" />
+                      <TH>Each box holds</TH>
+                      <TH className="w-24 text-center">Units/box</TH>
+                      <TH className="w-20 text-center">Fits</TH>
+                      <TH className="w-28" />
                     </tr>
                   </THead>
                   <tbody>
@@ -299,10 +305,13 @@ export default function DisplayPackingPage({
                             {template.name}
                           </div>
                         </TD>
-                        <TD className="tabular text-right text-secondary-foreground">
+                        <TD>
+                          <TemplateContents rows={template.contents} />
+                        </TD>
+                        <TD className="tabular text-center text-secondary-foreground">
                           {template.units_per_carton}
                         </TD>
-                        <TD className="tabular text-right font-semibold text-primary">
+                        <TD className="tabular text-center font-semibold text-primary">
                           {template.capacity}×
                         </TD>
                         <TD className="text-right">
@@ -728,6 +737,28 @@ function StepHeading({
  */
 function pieceLabel(row: QuantityRow): string {
   return row.part_name ? `${row.style_no} — ${row.part_name}` : row.style_no;
+}
+
+/** What one box of a design takes, so picking it is not a guess at a code. */
+function TemplateContents({ rows }: { rows: TemplateContent[] }) {
+  if (rows.length === 0) {
+    return <span className="text-xs text-muted-foreground">empty design</span>;
+  }
+  return (
+    <div className="space-y-0.5">
+      {rows.map((row) => (
+        <div key={`${row.style_no}-${row.part_name}`} className="text-xs">
+          <span className="tabular font-medium text-primary">
+            {row.quantity}×
+          </span>{" "}
+          <span className="tabular">{row.style_no}</span>
+          {row.part_name && (
+            <span className="text-muted-foreground"> — {row.part_name}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** The drill-down. Cartons are paginated, so they never load with the plan. */
