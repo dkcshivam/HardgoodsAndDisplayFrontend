@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm";
 import { Select } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/search-input";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { TemplateDialog } from "@/components/display/template-dialog";
-import { usePackTemplates } from "@/lib/queries";
+import { usePackTemplates, useRemove } from "@/lib/queries";
+import { ApiError } from "@/lib/api";
 import { format } from "@/lib/calc";
 import type { PackTemplate } from "@/types";
 
@@ -19,12 +22,16 @@ export default function PackTemplatesPage() {
   const [scope, setScope] = useState("true");
   const [editing, setEditing] = useState<PackTemplate | undefined>();
   const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState<PackTemplate | null>(null);
 
   const { data, isLoading, isError, refetch } = usePackTemplates({
     search,
     is_library: scope,
   });
   const rows = data?.results ?? [];
+
+  const remove = useRemove("pack-templates");
+  const toast = useToast();
 
   return (
     <main className="flex-1 overflow-y-auto p-6">
@@ -137,9 +144,29 @@ export default function PackTemplatesPage() {
                     {format.cbm(template.cbm)}
                   </TD>
                   <TD>
-                    {!template.is_library && (
-                      <Badge tone="neutral">one-off</Badge>
-                    )}
+                    <div className="flex items-center justify-end gap-1">
+                      {!template.is_library && (
+                        <Badge tone="neutral">one-off</Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditing(template);
+                          setOpen(true);
+                        }}
+                      >
+                        <Pencil />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive-subtle"
+                        onClick={() => setDeleting(template)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
                   </TD>
                 </TR>
               ))}
@@ -157,6 +184,32 @@ export default function PackTemplatesPage() {
         onOpenChange={setOpen}
         template={editing}
         onSaved={() => refetch()}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(next) => !next && setDeleting(null)}
+        title="Delete this box design?"
+        message={`Delete ${deleting?.code}? A design an order has already packed is kept — you will be told which order holds it.`}
+        busy={remove.isPending}
+        onConfirm={() =>
+          deleting &&
+          remove.mutate(deleting.id, {
+            onSuccess: () => {
+              toast.success(`${deleting.code} deleted`);
+              setDeleting(null);
+              refetch();
+            },
+            onError: (error) => {
+              setDeleting(null);
+              toast.error(
+                error instanceof ApiError
+                  ? error.detail
+                  : "Could not delete this design",
+              );
+            },
+          })
+        }
       />
     </main>
   );
