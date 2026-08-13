@@ -48,14 +48,12 @@ export default function NewDisplayOrderPage() {
 
   const merchants = useMerchants({ is_active: true });
   const products = useDisplayProducts({ status: "active" });
-  const stores = useStores({
-    is_active: true,
-    merchant: merchant ?? undefined,
-  });
+  // Every store is a checkbox here, so the grid must hold the whole list.
+  const stores = useStores({ is_active: true, page_size: 1000 });
   const save = useSave<Record<string, unknown>, DisplayOrder>("display-orders");
 
   const catalogue = products.data?.results ?? [];
-  const storeList = merchant ? (stores.data?.results ?? []) : [];
+  const storeList = stores.data?.results ?? [];
   const onOrder = storeList.filter((store) => chosen.includes(store.id));
   const activeStore = onOrder.find((store) => store.id === active) ?? onOrder[0];
 
@@ -64,14 +62,6 @@ export default function NewDisplayOrderPage() {
     rowsFor(store).reduce((sum, row) => sum + (row.quantity ?? 0), 0);
   const totalUnits = rows.reduce((sum, row) => sum + (row.quantity ?? 0), 0);
   const emptyStores = onOrder.filter((store) => unitsFor(store.id) === 0);
-
-  /** Changing merchant invalidates every store choice made under the old one. */
-  function pickMerchant(next: number | null) {
-    setMerchant(next);
-    setChosen([]);
-    setRows([]);
-    setActive(null);
-  }
 
   function toggleStore(id: number) {
     setChosen((current) =>
@@ -197,7 +187,7 @@ export default function NewDisplayOrderPage() {
                   value={merchant ?? ""}
                   invalid={Boolean(errors.merchant)}
                   onChange={(event) =>
-                    pickMerchant(
+                    setMerchant(
                       event.target.value ? Number(event.target.value) : null,
                     )
                   }
@@ -253,13 +243,9 @@ export default function NewDisplayOrderPage() {
             )}
           </CardHeader>
           <CardBody>
-            {!merchant ? (
+            {storeList.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                Choose a merchant to see its stores.
-              </p>
-            ) : storeList.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                This merchant has no stores yet — add them under Admin → Stores.
+                No stores yet — add them under Admin → Stores.
               </p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

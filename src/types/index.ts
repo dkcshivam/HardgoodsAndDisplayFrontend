@@ -22,14 +22,12 @@ export interface Merchant {
 }
 
 /**
- * One outlet of a merchant. The merchant buys; the store receives — and since
- * a carton is never shared between two stores, this is the boundary a display
- * order is split along.
+ * One outlet. Stores are global rather than owned by a merchant, so any order
+ * may ship to any of them — and since a carton is never shared between two
+ * stores, this is the boundary a display order is split along.
  */
 export interface Store {
   id: number;
-  merchant: number;
-  merchant_name: string;
   code: string;
   name: string;
   contact_name: string;

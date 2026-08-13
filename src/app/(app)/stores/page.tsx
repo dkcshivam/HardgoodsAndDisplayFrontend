@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
-import { useMerchants, useRemove, useSave, useStores } from "@/lib/queries";
+import { useRemove, useSave, useStores } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
 import type { Store } from "@/types";
 
@@ -42,15 +42,10 @@ const BLANK: Draft = {
 
 export default function StoresPage() {
   const [search, setSearch] = useState("");
-  const [merchant, setMerchant] = useState("");
   const [editing, setEditing] = useState<Draft | null>(null);
   const [deleting, setDeleting] = useState<Store | null>(null);
 
-  const merchants = useMerchants({ is_active: true });
-  const { data, isLoading } = useStores({
-    search,
-    merchant: merchant || undefined,
-  });
+  const { data, isLoading } = useStores({ search });
   const rows = data?.results ?? [];
 
   const save = useSave<Draft>("stores");
@@ -62,7 +57,7 @@ export default function StoresPage() {
       <div className="mx-auto max-w-5xl space-y-5">
         <PageHeader
           title="Stores"
-          description="The outlets a merchant's order is split across."
+          description="Every outlet we ship to. Any order can use any of them."
           actions={
             <Button size="sm" onClick={() => setEditing({ ...BLANK })}>
               <Plus /> New store
@@ -70,27 +65,11 @@ export default function StoresPage() {
           }
         />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-64 flex-1">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search store number, name or city…"
-            />
-          </div>
-          <Select
-            value={merchant}
-            onChange={(event) => setMerchant(event.target.value)}
-            className="w-56"
-          >
-            <option value="">All merchants</option>
-            {(merchants.data?.results ?? []).map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search store number, name or city…"
+        />
 
         <Card>
           <Table>
@@ -98,28 +77,24 @@ export default function StoresPage() {
               <tr>
                 <TH>Store</TH>
                 <TH>Name</TH>
-                <TH>Merchant</TH>
                 <TH>Ships to</TH>
                 <TH>Status</TH>
                 <TH />
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={6}>
-                  {merchant || search
+                <EmptyRow colSpan={5}>
+                  {search
                     ? "No stores match."
-                    : "No stores yet. Add the outlets a merchant ships to."}
+                    : "No stores yet. Add the outlets we ship to."}
                 </EmptyRow>
               )}
               {rows.map((row) => (
                 <TR key={row.id}>
                   <TD className="tabular font-medium">{row.code}</TD>
                   <TD>{row.name}</TD>
-                  <TD className="text-secondary-foreground">
-                    {row.merchant_name}
-                  </TD>
                   <TD className="text-secondary-foreground">
                     {[row.ship_city, row.ship_state, row.ship_country]
                       .filter(Boolean)
@@ -218,30 +193,13 @@ function StoreDialog({
 }) {
   const [form, setForm] = useState<Draft>(draft);
   const set = (patch: Draft) => setForm((current) => ({ ...current, ...patch }));
-  const merchants = useMerchants({ is_active: true });
 
   return (
     <DialogRoot open onOpenChange={(open) => !open && onClose()}>
       <DialogContent title={draft.id ? "Edit store" : "New store"}>
         <DialogBody className="space-y-4">
-          <Field label="Merchant" required>
-            <Select
-              value={form.merchant ?? ""}
-              onChange={(event) =>
-                set({ merchant: Number(event.target.value) || undefined })
-              }
-            >
-              <option value="">Choose a merchant</option>
-              {(merchants.data?.results ?? []).map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
           <FieldRow className="sm:grid-cols-3">
-            <Field label="Store no." required hint="The merchant's own number.">
+            <Field label="Store no." required hint="Unique across all stores.">
               <Input
                 value={form.code ?? ""}
                 onChange={(event) => set({ code: event.target.value })}
