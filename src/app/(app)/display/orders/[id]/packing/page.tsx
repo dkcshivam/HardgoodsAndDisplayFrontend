@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { use, useState } from "react";
 import {
   AlertTriangle,
@@ -9,6 +10,7 @@ import {
   Download,
   Info,
   Package,
+  Pencil,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,10 +27,11 @@ import {
   useDisplayOrder,
   useDisplayOrderAction,
   useDisplayPackingPlan,
+  usePackTemplate,
   useRemove,
 } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
-import { format, pieceKey } from "@/lib/calc";
+import { adjustmentMessage, format, pieceKey } from "@/lib/calc";
 import { cn } from "@/lib/utils";
 import type {
   Adjustment,
@@ -67,6 +70,10 @@ export default function DisplayPackingPage({
     useState<ApplicableTemplate | null>(null);
   const [authoring, setAuthoring] = useState(false);
   const [inspecting, setInspecting] = useState<number | null>(null);
+  // Section 2 only carries a summary of each design; editing one needs the
+  // whole thing, so it is fetched when the pencil is clicked.
+  const [editingTemplate, setEditingTemplate] = useState<number | null>(null);
+  const editing = usePackTemplate(editingTemplate);
 
   if (order.isLoading || plan.isLoading) {
     return (
@@ -102,11 +109,7 @@ export default function DisplayPackingPage({
 
   function report(adjustments?: Adjustment[]) {
     for (const item of adjustments ?? []) {
-      toast.error(
-        item.now === 0
-          ? `Step ${item.sequence} (${item.template_code}) no longer fits and was removed.`
-          : `Step ${item.sequence} (${item.template_code}) cut from ${item.was} to ${item.now}.`,
-      );
+      toast.error(adjustmentMessage(item));
     }
   }
 
@@ -147,6 +150,13 @@ export default function DisplayPackingPage({
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {order.data.status !== "shipped" && (
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href={`/display/orders/${orderId}/edit`}>
+                    <Pencil /> Edit order
+                  </Link>
+                </Button>
+              )}
               {data.carton_count > 0 && (
                 <Button
                   variant="secondary"
@@ -286,6 +296,7 @@ export default function DisplayPackingPage({
                     <CardTitle>Box designs that fit what is left</CardTitle>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       Applying fills out every carton this design still fits.
+                      Editing one rebuilds the boxes already packed from it.
                     </p>
                   </div>
                 </CardHeader>
@@ -334,6 +345,17 @@ export default function DisplayPackingPage({
                               }
                             >
                               Apply {template.capacity}×
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={busy}
+                              title="Change what goes in this box"
+                              onClick={() =>
+                                setEditingTemplate(template.template)
+                              }
+                            >
+                              <Pencil />
                             </Button>
                             <Button
                               variant="ghost"
@@ -608,6 +630,24 @@ export default function DisplayPackingPage({
           plan.refetch();
         }}
       />
+
+      {/* Edited against the whole catalogue rather than what is left: a design
+          that has already packed everything it takes would otherwise open with
+          none of its own pieces listed, and saving would empty it. */}
+      {editing.data && (
+        <TemplateDialog
+          open={editingTemplate !== null}
+          onOpenChange={(next) => !next && setEditingTemplate(null)}
+          template={editing.data}
+          orderId={orderId}
+          onSaved={(saved) => {
+            report(saved.adjustments);
+            toast.success(`${saved.code} updated`);
+            setEditingTemplate(null);
+            plan.refetch();
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={dropping !== null}

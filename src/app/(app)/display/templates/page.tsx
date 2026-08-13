@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { TemplateDialog } from "@/components/display/template-dialog";
 import { usePackTemplates, useRemove } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
-import { format } from "@/lib/calc";
+import { adjustmentMessage, format } from "@/lib/calc";
 import type { PackTemplate } from "@/types";
 
 export default function PackTemplatesPage() {
@@ -195,7 +195,14 @@ export default function PackTemplatesPage() {
         open={open}
         onOpenChange={setOpen}
         template={editing}
-        onSaved={() => refetch()}
+        onSaved={(saved) => {
+          // Editing a design an order has packed rebuilds that order's plan.
+          // It happens a long way from the packing screen, so say so here.
+          for (const item of saved.adjustments ?? []) {
+            toast.error(adjustmentMessage(item));
+          }
+          refetch();
+        }}
       />
 
       <ConfirmDialog

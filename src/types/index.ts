@@ -326,6 +326,12 @@ export interface PackTemplate {
 
   items: PackTemplateItem[];
   created_at: string;
+  /**
+   * Only on the response to an edit that changed what the box holds: the
+   * steps already built from it are replayed, and these are the ones that
+   * had to move.
+   */
+  adjustments?: Adjustment[];
 }
 
 /** What one store wants, of one product. Stores need not share a product mix. */
@@ -424,6 +430,13 @@ export interface PackStepRow {
 export interface DisplayReconciliation extends Reconciliation {
   store: number;
   store_code: string;
+  /**
+   * The lowest this order line may be set to. Not `packed`: that counts whole
+   * products and so takes the smallest part count, while a line is pinned by
+   * the *largest* — twenty tops in boxes are stranded by an order for ten,
+   * however few legs went with them.
+   */
+  packed_floor: number;
 }
 
 /** A store named only by identity — a copy target, not a progress report. */

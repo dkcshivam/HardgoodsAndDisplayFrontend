@@ -151,12 +151,22 @@ export default function DisplayOrdersPage() {
                       {format.date(order.created_at)}
                     </TD>
                     <TD className="text-right">
-                      <Link
-                        href={`/display/orders/${order.id}/packing`}
-                        className="text-xs font-medium text-primary hover:underline"
-                      >
-                        Pack →
-                      </Link>
+                      <div className="flex items-center justify-end gap-2.5">
+                        {order.status !== "shipped" && (
+                          <Link
+                            href={`/display/orders/${order.id}/edit`}
+                            className="text-xs font-medium text-secondary-foreground hover:text-primary hover:underline"
+                          >
+                            Edit
+                          </Link>
+                        )}
+                        <Link
+                          href={`/display/orders/${order.id}/packing`}
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          Pack →
+                        </Link>
+                      </div>
                     </TD>
                   </TR>
                 );

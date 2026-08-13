@@ -85,6 +85,22 @@ export function pieceKey(piece: { product: number; part: number | null }): strin
   return `${piece.product}:${piece.part ?? ""}`;
 }
 
+/**
+ * What a replay had to change, in words. Shared because a step can move for
+ * three different reasons — a step dropped, a step recounted, a design edited
+ * — and all of them owe the packer the same sentence.
+ */
+export function adjustmentMessage(item: {
+  sequence: number;
+  template_code: string;
+  was: number;
+  now: number;
+}): string {
+  return item.now === 0
+    ? `Step ${item.sequence} (${item.template_code}) no longer fits and was removed.`
+    : `Step ${item.sequence} (${item.template_code}) cut from ${item.was} to ${item.now}.`;
+}
+
 export const format = {
   weight: (kg: number | null | undefined) => (kg ?? 0).toFixed(3),
   cbm: (value: number | null | undefined) => (value ?? 0).toFixed(4),

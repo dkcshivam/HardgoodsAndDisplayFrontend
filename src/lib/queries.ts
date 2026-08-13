@@ -169,13 +169,23 @@ export const useDisplayOrder = (id: number) =>
 export const useDisplayPackingPlan = (
   orderId: number,
   storeId: number | null = null,
+  options?: Partial<UseQueryOptions<DisplayPackingPlan>>,
 ) =>
-  useQuery({
+  useQuery<DisplayPackingPlan>({
     queryKey: ["display-orders", orderId, "packing", storeId],
     queryFn: () =>
       api.get<DisplayPackingPlan>(
         `/display-orders/${orderId}/packing/${query({ store: storeId ?? undefined })}`,
       ),
+    ...options,
+  });
+
+/** The full design behind a row of `applicable_templates`, for editing it. */
+export const usePackTemplate = (id: number | null) =>
+  useQuery({
+    queryKey: ["pack-templates", id],
+    queryFn: () => api.get<PackTemplate>(`/pack-templates/${id}/`),
+    enabled: id !== null,
   });
 
 /**
