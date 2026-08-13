@@ -261,21 +261,40 @@ export default function DisplayPackingPage({
                 done ? "border-success/25 bg-success-subtle" : "border-warning/30"
               }
             >
-              <CardBody>
-                {done ? (
+              {done ? (
+                <CardBody>
                   <p className="text-sm text-success">
                     Every ordered unit is inside a carton and the counts agree.
                     {order.data.status === "packing" &&
                       " Mark the order packed when you are ready."}
                   </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
+                </CardBody>
+              ) : (
+                <Table>
+                  <THead>
+                    <tr>
+                      <TH>Product</TH>
+                      <TH>Description</TH>
+                      <TH className="w-28 text-right">Remaining</TH>
+                    </tr>
+                  </THead>
+                  <tbody>
                     {data.remaining.map((row) => (
-                      <RemainingChip key={pieceKey(row)} row={row} />
+                      <TR key={pieceKey(row)}>
+                        <TD className="tabular font-medium">
+                          {pieceLabel(row)}
+                        </TD>
+                        <TD className="text-secondary-foreground">
+                          {row.description}
+                        </TD>
+                        <TD className="tabular text-right font-semibold text-warning">
+                          {format.integer(row.quantity)}
+                        </TD>
+                      </TR>
                     ))}
-                  </div>
-                )}
-              </CardBody>
+                  </tbody>
+                </Table>
+              )}
             </Card>
           </section>
 
@@ -791,16 +810,6 @@ function stepGrowth(
     ),
   );
   return { extra, total: step.count + extra };
-}
-
-function RemainingChip({ row }: { row: QuantityRow }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-card px-2.5 py-1 text-xs">
-      <span className="tabular font-semibold text-warning">{row.quantity}</span>
-      <span className="tabular font-medium">{pieceLabel(row)}</span>
-      <span className="text-muted-foreground">{row.description}</span>
-    </span>
-  );
 }
 
 /** The drill-down. Cartons are paginated, so they never load with the plan. */
