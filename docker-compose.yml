@@ -10,6 +10,8 @@ services:
       target: dev
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
+      # Hosts allowed to pull dev assets cross-origin — set when tunnelling.
+      NEXT_DEV_ALLOWED_ORIGINS: ${NEXT_DEV_ALLOWED_ORIGINS:-}
       WATCHPACK_POLLING: "true"
     volumes:
       - .:/app
