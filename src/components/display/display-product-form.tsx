@@ -20,14 +20,21 @@ import {
   blankDisplayPart,
   type DisplayPartDraft,
 } from "@/components/display/display-part-card";
-import { useCategories, useSave } from "@/lib/queries";
+import {
+  PhotoGallery,
+  toPending,
+  type PendingPhoto,
+  type PhotoBinding,
+} from "@/components/products/photo-gallery";
+import { useCategories, useDisplayPhotoActions, useSave } from "@/lib/queries";
 import { cbm, format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
-import type { DisplayProduct } from "@/types";
+import type { DisplayProduct, ProductImage } from "@/types";
 
 type Draft = {
   id?: number;
   style_no: string;
+  style_name: string;
   description: string;
   category: number | null;
   customs_description: string;
@@ -39,10 +46,13 @@ type Draft = {
   width_in: number | null;
   height_in: number | null;
   parts: DisplayPartDraft[];
+  images: ProductImage[];
+  pending_images: PendingPhoto[];
 };
 
 const BLANK: Draft = {
   style_no: "",
+  style_name: "",
   description: "",
   category: null,
   customs_description: "",
@@ -54,19 +64,45 @@ const BLANK: Draft = {
   width_in: null,
   height_in: null,
   parts: [],
+  images: [],
+  pending_images: [],
 };
+
+interface PhotoState {
+  images: ProductImage[];
+  pending_images: PendingPhoto[];
+}
+
+/** Photos travel on their own endpoint, so they never ride the product body. */
+function withoutPhotos(record: PhotoState): Record<string, unknown> {
+  const body: Record<string, unknown> = { ...record };
+  delete body.images;
+  delete body.pending_images;
+  return body;
+}
 
 export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
   const router = useRouter();
   const toast = useToast();
 
   const [draft, setDraft] = useState<Draft>(
-    product ? { ...product, category: product.category } : BLANK,
+    product
+      ? {
+          ...product,
+          category: product.category,
+          parts: product.parts.map((part) => ({ ...part, pending_images: [] })),
+          pending_images: [],
+        }
+      : BLANK,
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
 
   const categories = useCategories({ is_active: true });
-  const save = useSave<Draft, DisplayProduct>("display-products");
+  const save = useSave<Record<string, unknown>, DisplayProduct>(
+    "display-products",
+  );
+  const photos = useDisplayPhotoActions();
 
   const set = (patch: Partial<Draft>) => setDraft({ ...draft, ...patch });
   const number = (value: string) => (value === "" ? null : Number(value));
@@ -78,6 +114,124 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
         i === index ? { ...part, ...patch } : part,
       ),
     });
+
+  /**
+   * A photo needs an owner row to point at, so one that already exists
+   * uploads straight away and one that does not queues until save.
+   */
+  function photoBinding(
+    field: "product" | "part",
+    ownerId: number | undefined,
+    state: PhotoState,
+    apply: (update: (owner: PhotoState) => Partial<PhotoState>) => void,
+  ): PhotoBinding {
+    return {
+      images: state.images,
+      pending: state.pending_images,
+
+      onAdd: (files) => {
+        if (!ownerId) {
+          const queued = files.map(toPending);
+          apply((owner) => ({
+            pending_images: [...owner.pending_images, ...queued],
+          }));
+          return;
+        }
+        for (const file of files) {
+          photos.upload.mutate(
+            field === "product"
+              ? { file, product: ownerId }
+              : { file, part: ownerId },
+            {
+              onSuccess: (image) =>
+                apply((owner) => ({ images: [...owner.images, image] })),
+              onError: () => toast.error("Could not upload that photo"),
+            },
+          );
+        }
+      },
+
+      onRemovePending: (key) =>
+        apply((owner) => {
+          const going = owner.pending_images.find((photo) => photo.key === key);
+          if (going) URL.revokeObjectURL(going.preview);
+          return {
+            pending_images: owner.pending_images.filter(
+              (photo) => photo.key !== key,
+            ),
+          };
+        }),
+
+      onRemoveImage: (id) =>
+        photos.remove.mutate(id, {
+          onSuccess: () =>
+            apply((owner) => ({
+              images: owner.images.filter((image) => image.id !== id),
+            })),
+          onError: () => toast.error("Could not remove that photo"),
+        }),
+
+      onSetMain: (id) =>
+        photos.setMain.mutate(id, {
+          onSuccess: () =>
+            apply((owner) => ({
+              images: owner.images.map((image) => ({
+                ...image,
+                is_main: image.id === id,
+              })),
+            })),
+          onError: () => toast.error("Could not set the main photo"),
+        }),
+    };
+  }
+
+  const productPhotos = photoBinding("product", draft.id, draft, (update) =>
+    setDraft((current) => ({ ...current, ...update(current) })),
+  );
+
+  const partPhotos = (index: number) =>
+    photoBinding("part", draft.parts[index].id, draft.parts[index], (update) =>
+      setDraft((current) => ({
+        ...current,
+        parts: current.parts.map((part, i) =>
+          i === index ? { ...part, ...update(part) } : part,
+        ),
+      })),
+    );
+
+  /** Queued photos can only be sent once their owner has an id. */
+  async function uploadQueued(saved: DisplayProduct): Promise<number> {
+    const jobs: Promise<unknown>[] = [];
+    const previews: string[] = [];
+
+    const queue = (
+      photo: PendingPhoto,
+      owner: { product?: number; part?: number },
+    ) => {
+      jobs.push(photos.upload.mutateAsync({ file: photo.file, ...owner }));
+      previews.push(photo.preview);
+    };
+
+    draft.pending_images.forEach((photo) => queue(photo, { product: saved.id }));
+    draft.parts.forEach((part, index) => {
+      // Parts come back in the order they were sent.
+      const savedPart = saved.parts[index];
+      if (savedPart) {
+        part.pending_images.forEach((photo) =>
+          queue(photo, { part: savedPart.id }),
+        );
+      }
+    });
+
+    if (jobs.length === 0) return 0;
+
+    setUploading(true);
+    const results = await Promise.allSettled(jobs);
+    previews.forEach(URL.revokeObjectURL);
+    setUploading(false);
+
+    return results.filter((result) => result.status === "rejected").length;
+  }
 
   /** Only reachable before the first save — after that the shape is fixed. */
   function setShape(multi: boolean) {
@@ -100,7 +254,7 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
     });
   }
 
-  function submit() {
+  async function submit() {
     const found: Record<string, string> = {};
     if (!draft.style_no.trim()) found.style_no = "Required";
     if (!draft.description.trim()) found.description = "Required";
@@ -116,33 +270,42 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
       return;
     }
 
-    const payload = {
-      ...draft,
-      parts: draft.parts.map((part, index) => ({ ...part, sort_order: index })),
+    const payload: Record<string, unknown> = {
+      ...withoutPhotos(draft),
+      parts: draft.parts.map((part, index) => ({
+        ...withoutPhotos(part),
+        sort_order: index,
+      })),
     };
 
-    save.mutate(payload, {
-      onSuccess: () => {
+    try {
+      const saved = await save.mutateAsync(payload);
+      const failed = await uploadQueued(saved);
+
+      if (failed > 0) {
+        toast.error(
+          `Product saved, but ${failed} photo${failed > 1 ? "s" : ""} did not upload.`,
+        );
+      } else {
         toast.success(product ? "Product updated" : "Product created");
-        router.push("/display/products");
-      },
-      onError: (error) => {
-        if (error instanceof ApiError) {
-          const style = error.fieldError("style_no");
-          const parts = error.fieldError("parts");
-          setErrors({ style_no: style ?? "", parts: parts ?? "" });
-          toast.error(
-            style ??
-              parts ??
-              error.fieldError("is_multi_part") ??
-              error.fieldError("product_weight_kg") ??
-              error.detail,
-          );
-        } else {
-          toast.error("Could not save the product");
-        }
-      },
-    });
+      }
+      router.push("/display/products");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const style = error.fieldError("style_no");
+        const parts = error.fieldError("parts");
+        setErrors({ style_no: style ?? "", parts: parts ?? "" });
+        toast.error(
+          style ??
+            parts ??
+            error.fieldError("is_multi_part") ??
+            error.fieldError("product_weight_kg") ??
+            error.detail,
+        );
+      } else {
+        toast.error("Could not save the product");
+      }
+    }
   }
 
   return (
@@ -180,17 +343,25 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
               </Field>
             </FieldRow>
 
-            <Field
-              label="Description"
-              required
-              error={errors.description || undefined}
-            >
-              <Input
-                value={draft.description}
-                invalid={Boolean(errors.description)}
-                onChange={(event) => set({ description: event.target.value })}
-              />
-            </Field>
+            <FieldRow className="sm:grid-cols-2">
+              <Field label="Style name" hint="The buyer's name for the style.">
+                <Input
+                  value={draft.style_name}
+                  onChange={(event) => set({ style_name: event.target.value })}
+                />
+              </Field>
+              <Field
+                label="Description"
+                required
+                error={errors.description || undefined}
+              >
+                <Input
+                  value={draft.description}
+                  invalid={Boolean(errors.description)}
+                  onChange={(event) => set({ description: event.target.value })}
+                />
+              </Field>
+            </FieldRow>
 
             <Field label="Category">
               <Select
@@ -207,6 +378,27 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
                 ))}
               </Select>
             </Field>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>Photos</CardTitle>
+              <CardDescription>
+                What the item looks like, so a packer can confirm it by eye.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <PhotoGallery
+              {...productPhotos}
+              emptyHint={
+                draft.is_multi_part
+                  ? "A photo of the assembled item, so the packer knows what the parts add up to."
+                  : "A photo of the item, so the packer can confirm what is in the carton."
+              }
+            />
           </CardBody>
         </Card>
 
@@ -313,6 +505,7 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
                   part={part}
                   index={index}
                   defaultOpen={!part.id}
+                  photos={partPhotos(index)}
                   onChange={(patch) => setPart(index, patch)}
                   onRemove={() =>
                     set({ parts: draft.parts.filter((_, i) => i !== index) })
@@ -386,8 +579,14 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
           >
             Cancel
           </Button>
-          <Button onClick={submit} disabled={save.isPending}>
-            {save.isPending ? "Saving…" : product ? "Save changes" : "Create product"}
+          <Button onClick={submit} disabled={save.isPending || uploading}>
+            {uploading
+              ? "Uploading photos…"
+              : save.isPending
+                ? "Saving…"
+                : product
+                  ? "Save changes"
+                  : "Create product"}
           </Button>
         </div>
       </div>

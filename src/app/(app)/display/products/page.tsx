@@ -45,7 +45,7 @@ export default function DisplayProductsPage() {
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Search style no or description…"
+            placeholder="Search style no, name or description…"
           />
           <Select
             className="w-40"
@@ -108,6 +108,11 @@ export default function DisplayProductsPage() {
                     >
                       {product.style_no}
                     </Link>
+                    {product.style_name && (
+                      <div className="text-xs text-muted-foreground">
+                        {product.style_name}
+                      </div>
+                    )}
                   </TD>
                   <TD className="text-secondary-foreground">
                     {product.description}

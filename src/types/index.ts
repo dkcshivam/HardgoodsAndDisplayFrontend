@@ -245,6 +245,7 @@ export interface DisplayProductPart {
   id: number;
   name: string;
   description: string;
+  images: ProductImage[];
   customs_description: string;
   hsn_code: string;
 
@@ -260,6 +261,7 @@ export interface DisplayProductPart {
 export interface DisplayProduct {
   id: number;
   style_no: string;
+  style_name: string;
   description: string;
   category: number | null;
   category_name: string;
@@ -280,6 +282,7 @@ export interface DisplayProduct {
   unit_cbm: number;
 
   parts: DisplayProductPart[];
+  images: ProductImage[];
 
   created_at: string;
 }

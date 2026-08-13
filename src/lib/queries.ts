@@ -88,9 +88,13 @@ export function useSave<T extends { id?: number }, R = T>(resource: string) {
  * already exists — a product or part needs an id before a file can point at
  * it. The product form queues them until then.
  */
-export function usePhotoActions() {
+export function usePhotoActions(
+  // Display keeps its own products and photo endpoint; the shape is identical.
+  resource = "product-images",
+  owner = "products",
+) {
   const client = useQueryClient();
-  const refresh = () => client.invalidateQueries({ queryKey: ["products"] });
+  const refresh = () => client.invalidateQueries({ queryKey: [owner] });
 
   return {
     upload: useMutation({
@@ -107,21 +111,25 @@ export function usePhotoActions() {
         body.append("image", file);
         if (product) body.append("product", String(product));
         if (part) body.append("part", String(part));
-        return api.post<ProductImage>("/product-images/", body);
+        return api.post<ProductImage>(`/${resource}/`, body);
       },
       onSuccess: refresh,
     }),
     remove: useMutation({
-      mutationFn: (id: number) => api.delete<void>(`/product-images/${id}/`),
+      mutationFn: (id: number) => api.delete<void>(`/${resource}/${id}/`),
       onSuccess: refresh,
     }),
     setMain: useMutation({
       mutationFn: (id: number) =>
-        api.patch<ProductImage>(`/product-images/${id}/`, { is_main: true }),
+        api.patch<ProductImage>(`/${resource}/${id}/`, { is_main: true }),
       onSuccess: refresh,
     }),
   };
 }
+
+/** The Display module's own photo endpoint. */
+export const useDisplayPhotoActions = () =>
+  usePhotoActions("display-product-images", "display-products");
 
 export function useRemove(resource: string) {
   const client = useQueryClient();

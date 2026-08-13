@@ -5,8 +5,14 @@ import { ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DerivedField, Field, FieldRow } from "@/components/ui/field";
+import {
+  PhotoGallery,
+  type PendingPhoto,
+  type PhotoBinding,
+} from "@/components/products/photo-gallery";
 import { cn } from "@/lib/utils";
 import { cbm, format } from "@/lib/calc";
+import type { ProductImage } from "@/types";
 
 export interface DisplayPartDraft {
   id?: number;
@@ -19,6 +25,8 @@ export interface DisplayPartDraft {
   width_in: number | null;
   height_in: number | null;
   sort_order: number;
+  images: ProductImage[];
+  pending_images: PendingPhoto[];
 }
 
 export function blankDisplayPart(sortOrder: number): DisplayPartDraft {
@@ -32,6 +40,8 @@ export function blankDisplayPart(sortOrder: number): DisplayPartDraft {
     width_in: null,
     height_in: null,
     sort_order: sortOrder,
+    images: [],
+    pending_images: [],
   };
 }
 
@@ -42,6 +52,7 @@ export function DisplayPartCard({
   onChange,
   onRemove,
   canRemove,
+  photos,
   defaultOpen = false,
 }: {
   part: DisplayPartDraft;
@@ -49,6 +60,7 @@ export function DisplayPartCard({
   onChange: (patch: Partial<DisplayPartDraft>) => void;
   onRemove: () => void;
   canRemove: boolean;
+  photos: PhotoBinding;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -91,6 +103,16 @@ export function DisplayPartCard({
 
       {open && (
         <div className="space-y-4 border-t border-border-subtle px-3.5 py-4">
+          <div>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Photos
+            </div>
+            <PhotoGallery
+              {...photos}
+              emptyHint="A photo of the part tells the packer what to look for."
+            />
+          </div>
+
           <FieldRow className="sm:grid-cols-2">
             <Field label="Part name" required>
               <Input
