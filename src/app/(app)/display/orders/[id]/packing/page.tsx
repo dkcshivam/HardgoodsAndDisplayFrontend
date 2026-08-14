@@ -243,8 +243,8 @@ export default function DisplayPackingPage({
               n={1}
               title={
                 done
-                  ? `${activeStore?.store_code ?? ""} is packed`
-                  : `What ${activeStore?.store_code ?? "this store"} still needs`
+                  ? `${activeStore?.store_name ?? ""} is packed`
+                  : `What ${activeStore?.store_name ?? "this store"} still needs`
               }
               done={done}
             />
@@ -496,10 +496,10 @@ export default function DisplayPackingPage({
                       and {data.replicable.length === 1 ? "is" : "are"} not
                       packed yet.
                     </span>{" "}
-                    <span className="tabular">
+                    <span>
                       {data.replicable
                         .slice(0, 8)
-                        .map((row) => row.store_code)
+                        .map((row) => row.store_name)
                         .join(", ")}
                       {data.replicable.length > 8 &&
                         ` and ${data.replicable.length - 8} more`}
@@ -766,7 +766,7 @@ function StorePicker({
             )}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="tabular font-medium">{row.store_code}</span>
+              <span className="font-medium">{row.store_name}</span>
               {row.is_done ? (
                 <span className="inline-flex items-center gap-1 text-success">
                   <Check className="size-3.5" /> packed
@@ -777,7 +777,6 @@ function StorePicker({
                 </span>
               )}
             </div>
-            <div className="truncate text-muted-foreground">{row.store_name}</div>
             <div className="tabular mt-0.5 text-muted-foreground">
               {format.integer(row.packed)}/{format.integer(row.ordered)} pieces ·{" "}
               {format.integer(row.carton_count)} carton

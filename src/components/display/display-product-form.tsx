@@ -257,7 +257,6 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
   async function submit() {
     const found: Record<string, string> = {};
     if (!draft.style_no.trim()) found.style_no = "Required";
-    if (!draft.description.trim()) found.description = "Required";
     if (draft.is_multi_part) {
       if (draft.parts.length < 2) found.parts = "At least two parts";
       else if (draft.parts.some((part) => !part.name.trim()))
@@ -350,11 +349,7 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
                   onChange={(event) => set({ style_name: event.target.value })}
                 />
               </Field>
-              <Field
-                label="Description"
-                required
-                error={errors.description || undefined}
-              >
+              <Field label="Description" error={errors.description || undefined}>
                 <Input
                   value={draft.description}
                   invalid={Boolean(errors.description)}

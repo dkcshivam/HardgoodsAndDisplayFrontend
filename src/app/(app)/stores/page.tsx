@@ -26,7 +26,6 @@ import type { Store } from "@/types";
 type Draft = Partial<Store>;
 
 const BLANK: Draft = {
-  code: "",
   name: "",
   contact_name: "",
   email: "",
@@ -68,7 +67,7 @@ export default function StoresPage() {
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Search store number, name or city…"
+          placeholder="Search store name or city…"
         />
 
         <Card>
@@ -76,16 +75,15 @@ export default function StoresPage() {
             <THead>
               <tr>
                 <TH>Store</TH>
-                <TH>Name</TH>
                 <TH>Ships to</TH>
                 <TH>Status</TH>
                 <TH />
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={4}>Loading…</EmptyRow>}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={5}>
+                <EmptyRow colSpan={4}>
                   {search
                     ? "No stores match."
                     : "No stores yet. Add the outlets we ship to."}
@@ -93,8 +91,7 @@ export default function StoresPage() {
               )}
               {rows.map((row) => (
                 <TR key={row.id}>
-                  <TD className="tabular font-medium">{row.code}</TD>
-                  <TD>{row.name}</TD>
+                  <TD className="font-medium">{row.name}</TD>
                   <TD className="text-secondary-foreground">
                     {[row.ship_city, row.ship_state, row.ship_country]
                       .filter(Boolean)
@@ -150,7 +147,7 @@ export default function StoresPage() {
               onError: (error) =>
                 toast.error(
                   error instanceof ApiError
-                    ? (error.fieldError("code") ?? error.detail)
+                    ? (error.fieldError("name") ?? error.detail)
                     : "Could not save",
                 ),
             })
@@ -162,7 +159,7 @@ export default function StoresPage() {
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
         title="Delete store"
-        message={`Delete ${deleting?.code} ${deleting?.name}? Orders already placed keep the reference.`}
+        message={`Delete ${deleting?.name}? Orders already placed keep the reference.`}
         busy={remove.isPending}
         onConfirm={() =>
           deleting &&
@@ -198,21 +195,16 @@ function StoreDialog({
     <DialogRoot open onOpenChange={(open) => !open && onClose()}>
       <DialogContent title={draft.id ? "Edit store" : "New store"}>
         <DialogBody className="space-y-4">
-          <FieldRow className="sm:grid-cols-3">
-            <Field label="Store no." required hint="Unique across all stores.">
-              <Input
-                value={form.code ?? ""}
-                onChange={(event) => set({ code: event.target.value })}
-                className="tabular"
-              />
-            </Field>
-            <Field label="Name" required className="sm:col-span-2">
-              <Input
-                value={form.name ?? ""}
-                onChange={(event) => set({ name: event.target.value })}
-              />
-            </Field>
-          </FieldRow>
+          <Field
+            label="Store"
+            required
+            hint='Number and name together, e.g. "118 Portland Pearl".'
+          >
+            <Input
+              value={form.name ?? ""}
+              onChange={(event) => set({ name: event.target.value })}
+            />
+          </Field>
 
           <Field label="Address">
             <Input

@@ -28,7 +28,7 @@ export interface Merchant {
  */
 export interface Store {
   id: number;
-  code: string;
+  /** Number and name in one, as the buyer writes it: "118 Portland Pearl". */
   name: string;
   contact_name: string;
   email: string;
@@ -338,7 +338,6 @@ export interface PackTemplate {
 export interface DisplayOrderLine {
   id: number;
   store: number;
-  store_code: string;
   store_name: string;
   product: number;
   product_style_no: string;
@@ -378,7 +377,6 @@ export interface DisplayCarton {
   step: number | null;
   /** Where it ships. Held on the carton so a stepless box still knows. */
   store: number;
-  store_code: string;
   store_name: string;
   template_code: string | null;
   length_in: number | null;
@@ -397,7 +395,6 @@ export interface DisplayCarton {
 export interface QuantityRow {
   /** Whose it is. Two stores wanting one product are two separate rows. */
   store: number;
-  store_code: string;
   store_name: string;
   product: number;
   /** Set when the product packs as parts — this row counts that part alone. */
@@ -412,7 +409,6 @@ export interface QuantityRow {
 export interface PackStepRow {
   sequence: number;
   store: number;
-  store_code: string;
   store_name: string;
   template: number;
   template_code: string;
@@ -429,7 +425,7 @@ export interface PackStepRow {
  */
 export interface DisplayReconciliation extends Reconciliation {
   store: number;
-  store_code: string;
+  store_name: string;
   /**
    * The lowest this order line may be set to. Not `packed`: that counts whole
    * products and so takes the smallest part count, while a line is pinned by
@@ -442,14 +438,12 @@ export interface DisplayReconciliation extends Reconciliation {
 /** A store named only by identity — a copy target, not a progress report. */
 export interface StoreRef {
   store: number;
-  store_code: string;
   store_name: string;
 }
 
 /** How far one store has got. The overview the packing screen opens on. */
 export interface StoreProgress {
   store: number;
-  store_code: string;
   store_name: string;
   ordered: number;
   packed: number;

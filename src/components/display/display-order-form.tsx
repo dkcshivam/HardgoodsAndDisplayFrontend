@@ -110,7 +110,7 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
     );
     if (short.length > 0) {
       toast.error(
-        `${short.map((s) => s.code).join(", ")} already ${
+        `${short.map((s) => s.name).join(", ")} already ${
           short.length === 1 ? "has" : "have"
         } more than ${bulkQuantity} packed.`,
       );
@@ -336,8 +336,7 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                         className="mt-0.5 size-4 accent-[var(--color-primary)]"
                       />
                       <span>
-                        <span className="tabular font-medium">{store.code}</span>{" "}
-                        {store.name}
+                        <span className="font-medium">{store.name}</span>
                         {locked && (
                           <Lock className="ml-1 inline size-3 text-muted-foreground" />
                         )}
@@ -431,14 +430,7 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                           : "hover:bg-secondary/50",
                       )}
                     >
-                      <span>
-                        <span className="tabular font-medium">
-                          {store.code}
-                        </span>
-                        <span className="block text-muted-foreground">
-                          {store.name}
-                        </span>
-                      </span>
+                      <span className="font-medium">{store.name}</span>
                       <span
                         className={cn(
                           "tabular shrink-0 font-semibold",
@@ -457,7 +449,6 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                   <>
                     <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2.5">
                       <span className="text-xs font-medium">
-                        <span className="tabular">{activeStore.code}</span>{" "}
                         {activeStore.name}
                       </span>
                       <Button
@@ -584,7 +575,7 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                 <span className="text-warning">
                   {" "}
                   · {emptyStores.length} still empty (
-                  {emptyStores.map((store) => store.code).join(", ")})
+                  {emptyStores.map((store) => store.name).join(", ")})
                 </span>
               )}
               .
