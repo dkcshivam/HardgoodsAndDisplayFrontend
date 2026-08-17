@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, TriangleAlert } from "lucide-react";
+import { Check, ImageOff, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import {
   DialogRoot,
   DialogContent,
@@ -25,7 +26,12 @@ import {
 } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import { cn, matchesTerms, searchTerms } from "@/lib/utils";
-import type { DisplayProduct, PackTemplate, QuantityRow } from "@/types";
+import type {
+  DisplayProduct,
+  PackTemplate,
+  ProductImage,
+  QuantityRow,
+} from "@/types";
 
 /** One row of the piece table — a whole product, or one part of one. */
 interface PieceRow {
@@ -35,6 +41,8 @@ interface PieceRow {
   /** The buyer's name for the style. Blank on plenty of products. */
   styleName: string;
   partName: string;
+  /** The piece's own photo — a part's, not its product's. Null if it has none. */
+  image: string | null;
   /** Searched alongside the label, so "garden arch" finds DSP-ARC-84. */
   description: string;
   /** Set only when designing against an order's remaining demand. */
@@ -107,6 +115,9 @@ export function TemplateDialog({
   // through half-typed numbers — it settles once you tab or click away.
   const [typingRow, setTypingRow] = useState<string | null>(null);
   const [pieceSearch, setPieceSearch] = useState("");
+  const [viewing, setViewing] = useState<{ src: string; alt: string } | null>(
+    null,
+  );
   if (open && (!everOpen || subject !== (template?.id ?? null))) {
     setSubject(template?.id ?? null);
     setDraft(seed(template));
@@ -128,20 +139,29 @@ export function TemplateDialog({
   // designing outside an order — the whole active catalogue exploded into
   // pieces. Nothing to add or remove; a quantity of 0 just means "not in this
   // box".
-  // The order's remaining rows carry no style name, so it comes from the
-  // catalogue already loaded here rather than widening that endpoint.
-  const styleNames = new Map(catalogue.map((item) => [item.id, item.style_name]));
+  // The order's remaining rows carry neither style name nor photo, so both
+  // come from the catalogue already loaded here rather than widening that
+  // endpoint.
+  const byId = new Map(catalogue.map((item) => [item.id, item]));
 
   const candidateRows: PieceRow[] = remaining
-    ? remaining.map((row) => ({
-        product: row.product,
-        part: row.part,
-        label: pieceLabel(row.style_no, row.part_name),
-        styleName: styleNames.get(row.product) ?? "",
-        partName: row.part_name,
-        description: row.description,
-        before: row.quantity,
-      }))
+    ? remaining.map((row) => {
+        const product = byId.get(row.product);
+        const piece =
+          row.part === null
+            ? product
+            : product?.parts.find((part) => part.id === row.part);
+        return {
+          product: row.product,
+          part: row.part,
+          label: pieceLabel(row.style_no, row.part_name),
+          styleName: product?.style_name ?? "",
+          partName: row.part_name,
+          image: mainImage(piece?.images),
+          description: row.description,
+          before: row.quantity,
+        };
+      })
     : catalogRows(catalogue, template);
 
   const terms = searchTerms(pieceSearch);
@@ -264,11 +284,18 @@ export function TemplateDialog({
   }
 
   return (
-    <DialogRoot open={open} onOpenChange={onOpenChange}>
+    <>
+      <ImageLightbox
+        src={viewing?.src ?? null}
+        alt={viewing?.alt ?? ""}
+        open={viewing !== null}
+        onOpenChange={(next) => !next && setViewing(null)}
+      />
+      <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent
         title={template ? `Edit ${template.code}` : "Design a box"}
         description="What goes inside, and the box it goes in."
-        className="max-w-2xl"
+        className="max-w-4xl"
       >
         <DialogBody className="space-y-4">
           <div>
@@ -327,10 +354,13 @@ export function TemplateDialog({
             ) : (
               // Capped so the box dimensions and weights below stay reachable
               // without scrolling past a catalogue of a hundred pieces.
-              <div className="max-h-64 overflow-y-auto rounded-lg border border-border">
+              <div className="max-h-96 overflow-y-auto rounded-lg border border-border">
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-border-subtle bg-secondary text-muted-foreground">
+                      <th className="w-16 px-3 py-2 text-left font-medium">
+                        Photo
+                      </th>
                       <th className="px-3 py-2 text-left font-medium">Piece</th>
                       {remaining && (
                         <th className="px-3 py-2 text-right font-medium">
@@ -352,11 +382,38 @@ export function TemplateDialog({
                       const key = pieceKey(row);
                       const quantity = draft.quantities[key] ?? 0;
                       const after = afterQuantity(row, quantity);
+                      const image = row.image;
                       return (
                         <tr
                           key={key}
                           className="border-b border-border-subtle last:border-0"
                         >
+                          <td className="px-3 py-2">
+                            {image ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setViewing({
+                                    src: image,
+                                    alt: `${row.label} ${row.styleName}`.trim(),
+                                  })
+                                }
+                                className="block size-11 overflow-hidden rounded-md border border-border hover:border-ring"
+                                title="See it full size"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={image}
+                                  alt=""
+                                  className="size-full object-cover"
+                                />
+                              </button>
+                            ) : (
+                              <span className="flex size-11 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
+                                <ImageOff className="size-4" />
+                              </span>
+                            )}
+                          </td>
                           <td className="px-3 py-2">
                             <span className="tabular">{row.label}</span>
                             {row.styleName && (
@@ -577,13 +634,20 @@ export function TemplateDialog({
                 : "Create design"}
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </DialogRoot>
+        </DialogContent>
+      </DialogRoot>
+    </>
   );
 }
 
 function pieceLabel(styleNo: string, partName: string): string {
   return partName ? `${styleNo} — ${partName}` : styleNo;
+}
+
+/** The photo to stand for a piece — the one marked main, else the first. */
+function mainImage(images?: ProductImage[]): string | null {
+  if (!images || images.length === 0) return null;
+  return (images.find((image) => image.is_main) ?? images[0]).image;
 }
 
 /** `name` on PackTemplate. Longer than this and the API rejects the save. */
@@ -626,6 +690,7 @@ function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): Piec
           label: pieceLabel(product.style_no, part.name),
           styleName: product.style_name,
           partName: part.name,
+          image: mainImage(part.images),
           description: part.description || product.description,
         }))
       : [
@@ -635,6 +700,7 @@ function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): Piec
             label: product.style_no,
             styleName: product.style_name,
             partName: "",
+            image: mainImage(product.images),
             description: product.description,
           },
         ],
@@ -649,10 +715,12 @@ function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): Piec
           product: item.product,
           part: item.part,
           label: pieceLabel(item.product_style_no, item.part_name),
-          // A deactivated product is off the catalogue, so its style name is
-          // no longer to hand — the style number still identifies the row.
+          // A deactivated product is off the catalogue, so neither its style
+          // name nor its photo is to hand — the style number still identifies
+          // the row.
           styleName: "",
           partName: item.part_name,
+          image: null,
           description: "",
         });
         known.add(key);
