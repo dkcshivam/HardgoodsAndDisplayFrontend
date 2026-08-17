@@ -24,7 +24,7 @@ import {
   pieceKey,
 } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, matchesTerms, searchTerms } from "@/lib/utils";
 import type { DisplayProduct, PackTemplate, QuantityRow } from "@/types";
 
 /** One row of the piece table — a whole product, or one part of one. */
@@ -136,10 +136,9 @@ export function TemplateDialog({
 
   const terms = searchTerms(pieceSearch);
   const visibleRows = terms.length
-    ? candidateRows.filter((row) => {
-        const haystack = normalize(`${row.label} ${row.description}`);
-        return terms.every((term) => haystack.includes(term));
-      })
+    ? candidateRows.filter((row) =>
+        matchesTerms(`${row.label} ${row.description}`, terms),
+      )
     : candidateRows;
 
   const productOf = (id: number) => catalogue.find((p) => p.id === id);
@@ -563,20 +562,6 @@ export function TemplateDialog({
 
 function pieceLabel(styleNo: string, partName: string): string {
   return partName ? `${styleNo} — ${partName}` : styleNo;
-}
-
-/**
- * Style numbers are punctuated ("DSP-ARC-84") and labels carry an em dash, so
- * a plain substring match fails on anything typed with spaces. Flattening
- * every separator to one lets "dsp arc" and "DSP-ARC-84" find the same row.
- */
-function normalize(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-/** Every term has to match, so extra words narrow rather than widen. */
-function searchTerms(search: string): string[] {
-  return normalize(search).split(" ").filter(Boolean);
 }
 
 /**
