@@ -32,6 +32,9 @@ interface PieceRow {
   product: number;
   part: number | null;
   label: string;
+  /** The buyer's name for the style. Blank on plenty of products. */
+  styleName: string;
+  partName: string;
   /** Searched alongside the label, so "garden arch" finds DSP-ARC-84. */
   description: string;
   /** Set only when designing against an order's remaining demand. */
@@ -40,8 +43,9 @@ interface PieceRow {
 
 interface Draft {
   id?: number;
-  code: string;
   name: string;
+  /** Once the name is typed in, it stops following the pieces. Emptying it resumes. */
+  nameTouched: boolean;
   remark: string;
   box_length_in: number | null;
   box_width_in: number | null;
@@ -55,8 +59,8 @@ interface Draft {
 }
 
 const BLANK: Draft = {
-  code: "",
   name: "",
+  nameTouched: false,
   remark: "",
   box_length_in: null,
   box_width_in: null,
@@ -124,11 +128,17 @@ export function TemplateDialog({
   // designing outside an order — the whole active catalogue exploded into
   // pieces. Nothing to add or remove; a quantity of 0 just means "not in this
   // box".
+  // The order's remaining rows carry no style name, so it comes from the
+  // catalogue already loaded here rather than widening that endpoint.
+  const styleNames = new Map(catalogue.map((item) => [item.id, item.style_name]));
+
   const candidateRows: PieceRow[] = remaining
     ? remaining.map((row) => ({
         product: row.product,
         part: row.part,
         label: pieceLabel(row.style_no, row.part_name),
+        styleName: styleNames.get(row.product) ?? "",
+        partName: row.part_name,
         description: row.description,
         before: row.quantity,
       }))
@@ -137,7 +147,7 @@ export function TemplateDialog({
   const terms = searchTerms(pieceSearch);
   const visibleRows = terms.length
     ? candidateRows.filter((row) =>
-        matchesTerms(`${row.label} ${row.description}`, terms),
+        matchesTerms(`${row.label} ${row.styleName} ${row.description}`, terms),
       )
     : candidateRows;
 
@@ -155,6 +165,11 @@ export function TemplateDialog({
   const filled = candidateRows
     .map((row) => ({ ...row, quantity: draft.quantities[pieceKey(row)] ?? 0 }))
     .filter((row) => row.quantity > 0);
+
+  // The name is what everyone reads to tell two designs apart, and typing it
+  // by hand after choosing the pieces only ever restated them.
+  const autoName = composeName(filled);
+  const name = draft.nameTouched ? draft.name : autoName;
 
   const left = new Map(
     (remaining ?? []).map((row) => [pieceKey(row), row.quantity]),
@@ -196,8 +211,7 @@ export function TemplateDialog({
 
   function submit() {
     const found: Record<string, string> = {};
-    if (!draft.code.trim()) found.code = "Required";
-    if (!draft.name.trim()) found.name = "Required";
+    if (!name.trim()) found.name = "Required";
     if (filled.length === 0) found.items = "Give at least one piece a quantity.";
 
     setErrors(found);
@@ -213,8 +227,9 @@ export function TemplateDialog({
     save.mutate(
       {
         id: draft.id,
-        code: draft.code,
-        name: draft.name,
+        // No code — the server assigns BOX-001, BOX-002 … on create and keeps
+        // whatever it assigned on edit.
+        name,
         remark: draft.remark,
         box_length_in: draft.box_length_in,
         box_width_in: draft.box_width_in,
@@ -237,8 +252,8 @@ export function TemplateDialog({
         },
         onError: (error) => {
           if (error instanceof ApiError) {
-            const field = error.fieldError("code");
-            if (field) setErrors({ code: field });
+            const field = error.fieldError("name");
+            if (field) setErrors({ name: field });
             toast.error(field ?? error.detail);
           } else {
             toast.error("Could not save the design");
@@ -342,7 +357,14 @@ export function TemplateDialog({
                           key={key}
                           className="border-b border-border-subtle last:border-0"
                         >
-                          <td className="px-3 py-2">{row.label}</td>
+                          <td className="px-3 py-2">
+                            <span className="tabular">{row.label}</span>
+                            {row.styleName && (
+                              <span className="ml-2 text-muted-foreground">
+                                {row.styleName}
+                              </span>
+                            )}
+                          </td>
                           {remaining && (
                             <td className="tabular px-3 py-2 text-right text-muted-foreground">
                               {row.before}
@@ -392,28 +414,28 @@ export function TemplateDialog({
             )}
           </div>
 
-          <FieldRow className="sm:grid-cols-3">
-            <Field label="Code" required error={errors.code || undefined}>
-              <Input
-                value={draft.code}
-                invalid={Boolean(errors.code)}
-                onChange={(event) => set({ code: event.target.value })}
-                className="tabular"
-              />
-            </Field>
-            <Field
-              label="Name"
-              required
-              error={errors.name || undefined}
-              className="sm:col-span-2"
-            >
-              <Input
-                value={draft.name}
-                invalid={Boolean(errors.name)}
-                onChange={(event) => set({ name: event.target.value })}
-              />
-            </Field>
-          </FieldRow>
+          <Field
+            label="Name"
+            required
+            error={errors.name || undefined}
+            hint={
+              draft.nameTouched
+                ? "Clear it to go back to naming itself from the pieces."
+                : "Names itself from the pieces above — type to override."
+            }
+          >
+            <Input
+              value={name}
+              invalid={Boolean(errors.name)}
+              placeholder="Give the pieces above a quantity"
+              onChange={(event) =>
+                set({
+                  name: event.target.value,
+                  nameTouched: event.target.value.trim() !== "",
+                })
+              }
+            />
+          </Field>
 
           <Field label="Box dimensions (in)">
             <div className="flex items-center gap-2">
@@ -564,6 +586,31 @@ function pieceLabel(styleNo: string, partName: string): string {
   return partName ? `${styleNo} — ${partName}` : styleNo;
 }
 
+/** `name` on PackTemplate. Longer than this and the API rejects the save. */
+const NAME_LIMIT = 180;
+
+/**
+ * The design's name, written from what is in the box: "Garden Arch * Pine
+ * Wreath". Parts are named too — two parts of one product are two different
+ * things to pack, and collapsing them to one style name would hide that.
+ */
+function composeName(pieces: PieceRow[]): string {
+  const seen = new Set<string>();
+  for (const piece of pieces) {
+    const style = piece.styleName || piece.label;
+    seen.add(piece.partName ? `${style} — ${piece.partName}` : style);
+  }
+
+  const parts = [...seen];
+  let name = parts.join(" * ");
+  // Fifty pieces would run past the column the API accepts, so the tail
+  // becomes a count rather than being cut mid-word.
+  for (let kept = parts.length - 1; name.length > NAME_LIMIT && kept > 0; kept--) {
+    name = `${parts.slice(0, kept).join(" * ")} + ${parts.length - kept} more`;
+  }
+  return name.slice(0, NAME_LIMIT);
+}
+
 /**
  * The full active catalogue, one row per piece — a whole product, or every
  * part of a multi-part one. Falls back to a saved template's own item labels
@@ -577,6 +624,8 @@ function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): Piec
           product: product.id,
           part: part.id,
           label: pieceLabel(product.style_no, part.name),
+          styleName: product.style_name,
+          partName: part.name,
           description: part.description || product.description,
         }))
       : [
@@ -584,6 +633,8 @@ function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): Piec
             product: product.id,
             part: null,
             label: product.style_no,
+            styleName: product.style_name,
+            partName: "",
             description: product.description,
           },
         ],
@@ -598,6 +649,10 @@ function catalogRows(catalogue: DisplayProduct[], template?: PackTemplate): Piec
           product: item.product,
           part: item.part,
           label: pieceLabel(item.product_style_no, item.part_name),
+          // A deactivated product is off the catalogue, so its style name is
+          // no longer to hand — the style number still identifies the row.
+          styleName: "",
+          partName: item.part_name,
           description: "",
         });
         known.add(key);
@@ -618,8 +673,10 @@ function seed(template?: PackTemplate): Draft {
 
   return {
     id: template.id,
-    code: template.code,
     name: template.name,
+    // A saved name is left alone — it may well have been written by hand, and
+    // there is no way to tell from here.
+    nameTouched: true,
     remark: template.remark,
     box_length_in: template.box_length_in,
     box_width_in: template.box_width_in,
