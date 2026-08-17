@@ -227,7 +227,7 @@ export function TemplateDialog({
     save.mutate(
       {
         id: draft.id,
-        // No code — the server assigns BOX-001, BOX-002 … on create and keeps
+        // No code — the server assigns T-001, T-002 … on create and keeps
         // whatever it assigned on edit.
         name,
         remark: draft.remark,

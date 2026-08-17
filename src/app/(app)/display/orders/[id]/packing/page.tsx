@@ -415,14 +415,11 @@ export default function DisplayPackingPage({
                         <TD className="tabular text-muted-foreground">
                           {step.sequence}
                         </TD>
-                        <TD>
-                          <span className="tabular font-medium">
-                            {step.template_code}
-                          </span>
-                          <div className="text-xs text-muted-foreground">
-                            {step.template_name}
-                          </div>
-                        </TD>
+                        {/* The name only. A design's code has no relation to
+                            the step it sits on, so a plan reading T-001,
+                            T-004, T-002 invites a hunt for the missing ones —
+                            and the pieces beside it identify it better. */}
+                        <TD className="font-medium">{step.template_name}</TD>
                         <TD className="text-right">
                           <button
                             onClick={() => setInspecting(step.sequence)}
