@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardBody,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -50,6 +49,8 @@ export interface ProductDraft extends PackSpecDraft {
   customs_description: string;
   hsn_code: string;
   is_multi_part: boolean;
+  /** Read-only — on an order, so the delete is refused. */
+  is_in_use: boolean;
   status: ProductStatus;
   assembled_length_in: number | null;
   assembled_width_in: number | null;
@@ -68,6 +69,7 @@ export const BLANK_PRODUCT: ProductDraft = {
   customs_description: "",
   hsn_code: "",
   is_multi_part: false,
+  is_in_use: false,
   status: "active",
   assembled_length_in: null,
   assembled_width_in: null,
@@ -89,6 +91,7 @@ export function toDraft(product: Product): ProductDraft {
     customs_description: product.customs_description,
     hsn_code: product.hsn_code,
     is_multi_part: product.is_multi_part,
+    is_in_use: product.is_in_use,
     status: product.status,
     assembled_length_in: product.assembled_length_in,
     assembled_width_in: product.assembled_width_in,
@@ -367,16 +370,25 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               Every field answers one question: how does this go in a box?
             </p>
           </div>
-          {form.id && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:bg-destructive-subtle"
-              onClick={() => setDeleting(true)}
-            >
-              <Trash2 /> Delete
-            </Button>
-          )}
+          {/* A product on an order cannot go: the order lines and the cartons
+              built from them are the record of what shipped. Set it inactive
+              instead and it leaves the pickers without rewriting history. */}
+          {form.id &&
+            (form.is_in_use ? (
+              <span className="flex items-center gap-1.5 rounded-md border border-border bg-secondary/40 px-2.5 py-1.5 text-xs text-muted-foreground">
+                <Lock className="size-3.5" />
+                On an order — set it inactive instead of deleting
+              </span>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:bg-destructive-subtle"
+                onClick={() => setDeleting(true)}
+              >
+                <Trash2 /> Delete
+              </Button>
+            ))}
         </div>
 
         <Card>
@@ -438,94 +450,12 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 </Select>
               </Field>
             </FieldRow>
-          </CardBody>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>How it packs</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-4">
-            {form.id ? (
-              <div className="flex items-start gap-2.5 rounded-lg border border-border bg-secondary/40 px-3.5 py-3">
-                <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                <div>
-                  <div className="text-sm font-medium">
-                    {form.is_multi_part ? "Multiple parts" : "Single box"}
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Fixed when the product was created. Every carton and weight
-                    already worked out from this style number assumes it — for a
-                    different shape, create a new style number.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <ShapeOption
-                  selected={!form.is_multi_part}
-                  title="Single box"
-                  description="The whole item ships in one carton."
-                  onSelect={() => setShape(false)}
-                />
-                <ShapeOption
-                  selected={form.is_multi_part}
-                  title="Multiple parts"
-                  description="Ships disassembled, one carton per part."
-                  onSelect={() => setShape(true)}
-                />
-              </div>
-            )}
-
+            {/* Customs stays with the identity on a single-box product. On a
+                multi-part one each part classifies separately, so it moves
+                into the part cards instead. */}
             {!form.is_multi_part && (
-              <Field
-                label="Pack per box"
-                hint="How many units fit in one carton. Drives carton splitting."
-              >
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.pack_per_box}
-                  onChange={(event) =>
-                    set({ pack_per_box: Number(event.target.value) || 1 })
-                  }
-                  className="sm:w-32"
-                />
-              </Field>
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Photos</CardTitle>
-              <CardDescription>
-                {form.id
-                  ? "Saved as soon as you add them."
-                  : "Uploaded when you save the product."}
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardBody>
-            <PhotoGallery
-              {...productPhotos}
-              emptyHint={
-                form.is_multi_part
-                  ? "A photo of the assembled item, so the packer knows what the parts add up to."
-                  : "A photo of the item, so the packer can confirm what is in the carton."
-              }
-            />
-          </CardBody>
-        </Card>
-
-        {!form.is_multi_part ? (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle>Customs</CardTitle>
-              </CardHeader>
-              <CardBody className="space-y-4">
+              <FieldRow className="sm:grid-cols-2">
                 <Field
                   label="Customs description"
                   hint="Formal name for shipping documents; often differs from the description."
@@ -541,17 +471,80 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                   <Input
                     value={form.hsn_code}
                     onChange={(event) => set({ hsn_code: event.target.value })}
-                    className="tabular sm:w-40"
+                    className="tabular"
                   />
                 </Field>
-              </CardBody>
-            </Card>
+              </FieldRow>
+            )}
 
+            <div className="border-t border-border-subtle pt-4">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Photos
+                <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground">
+                  {form.id
+                    ? "Saved as soon as you add them."
+                    : "Uploaded when you save the product."}
+                </span>
+              </div>
+              <PhotoGallery
+                {...productPhotos}
+                emptyHint={
+                  form.is_multi_part
+                    ? "A photo of the assembled item, so the packer knows what the parts add up to."
+                    : "A photo of the item, so the packer can confirm what is in the carton."
+                }
+              />
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Only worth asking on a new product. Once saved the shape is fixed,
+            and a card that exists only to say so is a card in the way. */}
+        {!form.id && (
+          <Card>
+            <CardHeader>
+              <CardTitle>How it packs</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <ShapeOption
+                  selected={!form.is_multi_part}
+                  title="Single box"
+                  description="The whole item ships in one carton."
+                  onSelect={() => setShape(false)}
+                />
+                <ShapeOption
+                  selected={form.is_multi_part}
+                  title="Multiple parts"
+                  description="Ships disassembled, one carton per part."
+                  onSelect={() => setShape(true)}
+                />
+              </div>
+            </CardBody>
+          </Card>
+        )}
+
+        {!form.is_multi_part ? (
+          <>
             <Card>
               <CardHeader>
                 <CardTitle>The carton</CardTitle>
               </CardHeader>
-              <CardBody>
+              <CardBody className="space-y-4">
+                <Field
+                  label="Pack per box"
+                  hint="How many units fit in one carton. Drives carton splitting."
+                >
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.pack_per_box}
+                    onChange={(event) =>
+                      set({ pack_per_box: Number(event.target.value) || 1 })
+                    }
+                    className="sm:w-32"
+                  />
+                </Field>
                 <PackSpecFields
                   value={form}
                   onChange={set}
@@ -661,14 +654,16 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                     }
                   />
                 ))}
-
-                <ShipsAsSummary
-                  cartons={form.parts.length}
-                  grossKg={totalGross}
-                  volumeCbm={totalCbm}
-                />
               </CardBody>
             </Card>
+
+            {/* Outside the parts card: it is the answer for the whole product,
+                not another row inside the list it is totalling. */}
+            <ShipsAsSummary
+              cartons={form.parts.length}
+              grossKg={totalGross}
+              volumeCbm={totalCbm}
+            />
           </>
         )}
 
@@ -704,8 +699,8 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
   );
 }
 
-/** The totals the parts above add up to. Tinted so it reads as an answer,
- *  not another thing to fill in. */
+/** The totals every part adds up to. Tinted so it reads as an answer, not
+ *  another thing to fill in. */
 function ShipsAsSummary({
   cartons,
   grossKg,
@@ -716,7 +711,7 @@ function ShipsAsSummary({
   volumeCbm: number;
 }) {
   return (
-    <div className="mt-1 rounded-lg border border-primary/25 bg-primary-subtle px-3.5 py-3">
+    <div className="rounded-lg border border-primary/25 bg-primary-subtle px-4 py-3.5">
       <div className="text-[11px] font-semibold uppercase tracking-wider text-primary">
         One of this product ships as
       </div>

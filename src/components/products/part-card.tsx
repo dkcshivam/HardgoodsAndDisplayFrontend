@@ -143,7 +143,7 @@ export function PartCard({
 
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              The part itself
+              Part dimensions
             </div>
             <FieldRow>
               <Field label="Length (in)">
@@ -181,7 +181,7 @@ export function PartCard({
 
           <div>
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Its carton
+              Carton dimensions
             </div>
             <PackSpecFields
               value={part}

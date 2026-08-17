@@ -1,14 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Camera, ImagePlus, Star, Trash2 } from "lucide-react";
+import { useRef } from "react";
+import { ImagePlus, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DialogRoot,
-  DialogContent,
-  DialogBody,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { ProductImage } from "@/types";
 
@@ -45,7 +39,6 @@ export function PhotoGallery({
   emptyHint,
 }: PhotoBinding & { emptyHint: string }) {
   const fileInput = useRef<HTMLInputElement>(null);
-  const [camera, setCamera] = useState(false);
 
   return (
     <div className="space-y-3">
@@ -95,14 +88,6 @@ export function PhotoGallery({
         >
           <ImagePlus /> Choose files
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => setCamera(true)}
-        >
-          <Camera /> Take photo
-        </Button>
         <input
           ref={fileInput}
           type="file"
@@ -116,15 +101,6 @@ export function PhotoGallery({
           }}
         />
       </div>
-
-      <CameraDialog
-        open={camera}
-        onOpenChange={setCamera}
-        onCapture={(file) => {
-          onAdd([file]);
-          setCamera(false);
-        }}
-      />
     </div>
   );
 }
@@ -193,120 +169,5 @@ function TileAction({
       {children}
       <span className="sr-only">{label}</span>
     </button>
-  );
-}
-
-/**
- * The packer photographs the carton where it stands, so the camera has to be
- * in the app. Browsers only grant it over HTTPS or on localhost.
- *
- * Mounted only while open, so the stream starts and stops with the dialog.
- */
-function CameraDialog({
-  open,
-  onOpenChange,
-  onCapture,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCapture: (file: File) => void;
-}) {
-  return (
-    <DialogRoot open={open} onOpenChange={onOpenChange}>
-      {open && (
-        <CameraStage onCancel={() => onOpenChange(false)} onCapture={onCapture} />
-      )}
-    </DialogRoot>
-  );
-}
-
-function CameraStage({
-  onCancel,
-  onCapture,
-}: {
-  onCancel: () => void;
-  onCapture: (file: File) => void;
-}) {
-  const video = useRef<HTMLVideoElement>(null);
-  const [ready, setReady] = useState(false);
-  // Browsers hide mediaDevices entirely on an insecure origin.
-  const [error, setError] = useState<string | null>(() =>
-    navigator.mediaDevices
-      ? null
-      : "This browser will not open a camera unless the page is on HTTPS or localhost.",
-  );
-
-  useEffect(() => {
-    if (!navigator.mediaDevices) return;
-
-    let stream: MediaStream | null = null;
-    let cancelled = false;
-
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: "environment" } })
-      .then((opened) => {
-        stream = opened;
-        if (cancelled) return;
-        if (video.current) video.current.srcObject = opened;
-        setReady(true);
-      })
-      .catch(() =>
-        setError("No camera available, or permission was refused in the browser."),
-      );
-
-    return () => {
-      cancelled = true;
-      stream?.getTracks().forEach((track) => track.stop());
-    };
-  }, []);
-
-  function capture() {
-    const source = video.current;
-    if (!source) return;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = source.videoWidth;
-    canvas.height = source.videoHeight;
-    canvas.getContext("2d")?.drawImage(source, 0, 0);
-
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return;
-        onCapture(
-          new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" }),
-        );
-      },
-      "image/jpeg",
-      0.9,
-    );
-  }
-
-  return (
-    <DialogContent
-      title="Take a photo"
-      description="Frame the item and capture. The photo joins the gallery."
-    >
-      <DialogBody>
-        {error ? (
-          <p className="py-8 text-center text-sm text-destructive">{error}</p>
-        ) : (
-          <video
-            ref={video}
-            autoPlay
-            playsInline
-            muted
-            className="aspect-video w-full rounded-lg bg-foreground/90 object-cover"
-          />
-        )}
-      </DialogBody>
-      <DialogFooter>
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button onClick={capture} disabled={!ready}>
-          <Camera /> Capture
-        </Button>
-      </DialogFooter>
-    </DialogContent>
   );
 }

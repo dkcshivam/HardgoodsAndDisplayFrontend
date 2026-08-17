@@ -115,6 +115,8 @@ export interface Product extends Partial<PackSpec> {
 
   /** Fixed at creation — the shape every carton for this SKU was built from. */
   is_multi_part: boolean;
+  /** On an order. The database refuses the delete; the form says so first. */
+  is_in_use: boolean;
   status: ProductStatus;
 
   // Reference only — the item never ships assembled.

@@ -74,18 +74,17 @@ export default function ProductsPage() {
                 <TH>Description</TH>
                 <TH>Category</TH>
                 <TH>Packs as</TH>
-                <TH />
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={6}>
+                <EmptyRow colSpan={5}>
                   <span className="text-destructive">Could not load products.</span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={6}>
+                <EmptyRow colSpan={5}>
                   Nothing matches. Try clearing the filters.
                 </EmptyRow>
               )}
@@ -123,14 +122,6 @@ export default function ProductsPage() {
                     ) : (
                       <Badge>{row.pack_per_box} per box</Badge>
                     )}
-                  </TD>
-                  <TD className="text-right">
-                    <Link
-                      href={`/products/${row.id}`}
-                      className="text-xs font-medium text-primary hover:underline"
-                    >
-                      Edit
-                    </Link>
                   </TD>
                 </TR>
               ))}

@@ -8,7 +8,6 @@ import {
   LayoutGrid,
   Package,
   Sparkles,
-  Truck,
 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,9 +52,6 @@ export default function Dashboard() {
 
   const hardgoodsOpen = hardgoodsAll.filter((o) => OPEN.includes(o.status));
   const displayOpen = displayAll.filter((o) => OPEN.includes(o.status));
-  const awaitingShipment =
-    hardgoodsAll.filter((o) => o.status === "packed").length +
-    displayAll.filter((o) => o.status === "packed").length;
 
   const needsAttention: AttentionRow[] = [
     ...hardgoodsOpen.map((o) => toRow(o, `/orders/${o.id}/packing`)),
@@ -73,7 +69,7 @@ export default function Dashboard() {
           description="Here's what's moving across the floor today."
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Stat
             label="Open orders"
             sub="Across all sections"
@@ -94,12 +90,6 @@ export default function Dashboard() {
             value={displayOpen.length}
             icon={Sparkles}
             href="/display/orders"
-          />
-          <Stat
-            label="Awaiting shipment"
-            sub="Packed, not shipped"
-            value={awaitingShipment}
-            icon={Truck}
           />
         </div>
 
