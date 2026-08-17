@@ -6,6 +6,7 @@ import { Lock, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input, Select } from "@/components/ui/input";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
@@ -47,7 +48,6 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
   // Bulk fill — the fast path when most stores want the same thing.
   const [bulkProduct, setBulkProduct] = useState<number | null>(null);
   const [bulkColor, setBulkColor] = useState("");
-  const [bulkQuantity, setBulkQuantity] = useState<number | null>(null);
 
   const merchants = useMerchants({ is_active: true });
   // Both pickers must hold the whole list — a product created a minute ago
@@ -64,6 +64,15 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
 
   const catalogue = products.data?.results ?? [];
   const storeList = stores.data?.results ?? [];
+
+  // Style number first because that is what people say out loud; the name
+  // sits under it, and the description is searchable without cluttering.
+  const productOptions: ComboboxOption[] = catalogue.map((item) => ({
+    value: item.id,
+    label: item.style_no,
+    hint: item.style_name || item.description,
+    keywords: item.description,
+  }));
   const onOrder = storeList.filter((store) => chosen.includes(store.id));
   const activeStore = onOrder.find((store) => store.id === active) ?? onOrder[0];
 
@@ -100,42 +109,42 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
     );
   }
 
+  /**
+   * Puts the product on every store and leaves the quantity blank. Stores
+   * rarely want the same number of anything, so filling a quantity here only
+   * meant overtyping it store by store afterwards.
+   */
   function fillEveryStore() {
-    if (!bulkProduct || !bulkQuantity || onOrder.length === 0) {
-      toast.error("Choose a product and a quantity first.");
+    if (!bulkProduct || onOrder.length === 0) {
+      toast.error("Choose a product first.");
       return;
     }
-    const short = onOrder.filter(
-      (store) => packedOf(store.id, bulkProduct) > bulkQuantity,
-    );
-    if (short.length > 0) {
-      toast.error(
-        `${short.map((s) => s.name).join(", ")} already ${
-          short.length === 1 ? "has" : "have"
-        } more than ${bulkQuantity} packed.`,
-      );
-      return;
-    }
+    let added = 0;
     setRows((current) => {
       const next = [...current];
       for (const store of onOrder) {
         const at = next.findIndex(
           (row) => row.store === store.id && row.product === bulkProduct,
         );
-        const row = {
+        // An existing line keeps whatever quantity it already has — this adds
+        // the product, it does not reset what anyone typed.
+        if (at >= 0) continue;
+        next.push({
           store: store.id,
           product: bulkProduct,
           color: bulkColor.trim(),
-          quantity: bulkQuantity,
-        };
-        if (at >= 0) next[at] = row;
-        else next.push(row);
+          quantity: null,
+        });
+        added += 1;
       }
       return next;
     });
+
     const label = catalogue.find((item) => item.id === bulkProduct)?.style_no;
     toast.success(
-      `${label} × ${bulkQuantity} set on ${onOrder.length} store${onOrder.length === 1 ? "" : "s"}`,
+      added === 0
+        ? `Every store already lists ${label}.`
+        : `${label} added to ${added} store${added === 1 ? "" : "s"} — set each quantity below.`,
     );
   }
 
@@ -367,26 +376,19 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
               </div>
             </CardHeader>
 
-            {/* Most stores usually take the same thing; this sets them all at
-                once, and the per-store editor below handles the exceptions. */}
+            {/* Most stores take the same products; this puts one on all of
+                them at once. Quantities stay per store — they always differ. */}
             <CardBody className="border-b border-border-subtle bg-secondary/30">
               <div className="flex flex-wrap items-end gap-2">
                 <Field label="Product" className="min-w-56 flex-1">
-                  <Select
-                    value={bulkProduct ?? ""}
-                    onChange={(event) =>
-                      setBulkProduct(
-                        event.target.value ? Number(event.target.value) : null,
-                      )
-                    }
-                  >
-                    <option value="">Choose a product</option>
-                    {catalogue.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.style_no} · {item.description}
-                      </option>
-                    ))}
-                  </Select>
+                  <Combobox
+                    value={bulkProduct}
+                    onChange={setBulkProduct}
+                    options={productOptions}
+                    placeholder="Choose a product"
+                    searchPlaceholder="Search style no or name…"
+                    empty="No product matches."
+                  />
                 </Field>
                 <Field label="Colour" className="w-36">
                   <Input
@@ -394,23 +396,8 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                     onChange={(event) => setBulkColor(event.target.value)}
                   />
                 </Field>
-                <Field label="Qty each" className="w-28">
-                  <Input
-                    type="number"
-                    min={1}
-                    value={bulkQuantity ?? ""}
-                    onChange={(event) =>
-                      setBulkQuantity(
-                        event.target.value === ""
-                          ? null
-                          : Number(event.target.value) || null,
-                      )
-                    }
-                    className="tabular text-right"
-                  />
-                </Field>
                 <Button variant="secondary" onClick={fillEveryStore}>
-                  Fill all {onOrder.length} stores
+                  Add to all {onOrder.length} stores
                 </Button>
               </div>
             </CardBody>
@@ -490,24 +477,17 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                           return (
                             <TR key={index}>
                               <TD>
-                                <Select
-                                  value={row.product ?? ""}
+                                <Combobox
+                                  value={row.product}
                                   disabled={packed > 0}
-                                  onChange={(event) =>
-                                    setRow(index, {
-                                      product: event.target.value
-                                        ? Number(event.target.value)
-                                        : null,
-                                    })
+                                  onChange={(product) =>
+                                    setRow(index, { product })
                                   }
-                                >
-                                  <option value="">Choose a product</option>
-                                  {catalogue.map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                      {item.style_no} · {item.description}
-                                    </option>
-                                  ))}
-                                </Select>
+                                  options={productOptions}
+                                  placeholder="Choose a product"
+                                  searchPlaceholder="Search style no or name…"
+                                  empty="No product matches."
+                                />
                                 {packed > 0 && (
                                   <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                                     <Lock className="size-3" />
