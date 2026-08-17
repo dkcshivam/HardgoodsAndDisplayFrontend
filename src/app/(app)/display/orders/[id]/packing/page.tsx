@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState } from "react";
+import { Fragment, use, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -20,6 +20,7 @@ import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { DialogRoot, DialogContent, DialogBody } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
+import { Tooltip } from "@/components/ui/tooltip";
 import { ReconciliationBar } from "@/components/packing/reconciliation-bar";
 import { TemplateDialog } from "@/components/display/template-dialog";
 import {
@@ -415,11 +416,34 @@ export default function DisplayPackingPage({
                         <TD className="tabular text-muted-foreground">
                           {step.sequence}
                         </TD>
-                        {/* The name only. A design's code has no relation to
-                            the step it sits on, so a plan reading T-001,
-                            T-004, T-002 invites a hunt for the missing ones —
-                            and the pieces beside it identify it better. */}
-                        <TD className="font-medium">{step.template_name}</TD>
+                        {/* The style numbers, not the design's code: a code
+                            has no relation to the step it sits on, so a plan
+                            reading T-001, T-004, T-002 invites a hunt for the
+                            missing ones. The style name is a hover away. */}
+                        <TD>
+                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                            {step.consumed.map((row, index) => (
+                              <Fragment key={pieceKey(row)}>
+                                {index > 0 && (
+                                  <span className="text-muted-foreground">
+                                    *
+                                  </span>
+                                )}
+                                <Tooltip label={row.style_name}>
+                                  <span
+                                    className={cn(
+                                      "tabular text-sm font-medium",
+                                      row.style_name &&
+                                        "cursor-help underline decoration-dotted underline-offset-4",
+                                    )}
+                                  >
+                                    {pieceLabel(row)}
+                                  </span>
+                                </Tooltip>
+                              </Fragment>
+                            ))}
+                          </div>
+                        </TD>
                         <TD className="text-right">
                           <button
                             onClick={() => setInspecting(step.sequence)}

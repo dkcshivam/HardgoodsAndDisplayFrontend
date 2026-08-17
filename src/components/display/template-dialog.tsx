@@ -352,9 +352,10 @@ export function TemplateDialog({
                 No piece matches &ldquo;{pieceSearch.trim()}&rdquo;.
               </p>
             ) : (
-              // Capped so the box dimensions and weights below stay reachable
-              // without scrolling past a catalogue of a hundred pieces.
-              <div className="max-h-96 overflow-y-auto rounded-lg border border-border">
+              // Five rows and the start of a sixth: enough to work in, low
+              // enough that the name and box dimensions stay on screen, and
+              // the part-row showing signals there is more to scroll.
+              <div className="max-h-84 overflow-y-auto rounded-lg border border-border">
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-border-subtle bg-secondary text-muted-foreground">
@@ -654,16 +655,13 @@ function mainImage(images?: ProductImage[]): string | null {
 const NAME_LIMIT = 180;
 
 /**
- * The design's name, written from what is in the box: "Garden Arch * Pine
- * Wreath". Parts are named too — two parts of one product are two different
- * things to pack, and collapsing them to one style name would hide that.
+ * The design's name, written from what is in the box: "DSP-ARC-84 *
+ * DSP-WRT-24". Style numbers rather than style names — the number is what
+ * people say out loud, and `label` already carries the part when there is
+ * one, which two parts of a product need to stay distinct.
  */
 function composeName(pieces: PieceRow[]): string {
-  const seen = new Set<string>();
-  for (const piece of pieces) {
-    const style = piece.styleName || piece.label;
-    seen.add(piece.partName ? `${style} — ${piece.partName}` : style);
-  }
+  const seen = new Set(pieces.map((piece) => piece.label));
 
   const parts = [...seen];
   let name = parts.join(" * ");

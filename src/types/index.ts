@@ -400,6 +400,7 @@ export interface QuantityRow {
   /** Set when the product packs as parts — this row counts that part alone. */
   part: number | null;
   style_no: string;
+  style_name: string;
   part_name: string;
   description: string;
   quantity: number;
