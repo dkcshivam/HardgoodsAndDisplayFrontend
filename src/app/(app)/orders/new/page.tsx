@@ -109,18 +109,6 @@ export default function NewOrderPage() {
     );
   }
 
-  const estimatedCartons = lines.reduce((sum, line) => {
-    const product = catalogue.find((item) => item.id === line.product);
-    if (!product) return sum;
-    const quantity = line.quantity ?? 0;
-    return (
-      sum +
-      (product.is_multi_part
-        ? product.part_count * quantity
-        : cartonCount(quantity, product.pack_per_box))
-    );
-  }, 0);
-
   return (
     <main className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto max-w-3xl space-y-5 pb-10">
@@ -330,15 +318,6 @@ export default function NewOrderPage() {
               })}
             </tbody>
           </Table>
-          <CardBody className="border-t border-border-subtle bg-secondary/30 text-xs text-muted-foreground">
-            Colour is recorded per order — the same style ships in whatever
-            finish this merchant asked for, and it prints on the packing list.
-            Auto-pack will propose about{" "}
-            <span className="tabular font-semibold text-foreground">
-              {estimatedCartons}
-            </span>{" "}
-            cartons. Every one stays editable afterwards.
-          </CardBody>
         </Card>
 
         <div className="flex items-center justify-end gap-2">

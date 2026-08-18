@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardBody,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -500,9 +499,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               <CardTitle>
                 Photos<span className="ml-0.5 text-destructive">*</span>
               </CardTitle>
-              <CardDescription>
-                What the item looks like, so a packer can confirm it by eye.
-              </CardDescription>
             </div>
           </CardHeader>
           <CardBody>
@@ -538,7 +534,7 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 <ShapeOption
                   selected={form.is_multi_part}
                   title="Multiple parts"
-                  description="Ships disassembled, one carton per part."
+                  description="Ships disassembled."
                   onSelect={() => setShape(true)}
                 />
               </div>
@@ -596,7 +592,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                   label="Pack per box"
                   required
                   error={errors.pack_per_box || undefined}
-                  hint="How many units fit in one carton. Drives carton splitting."
                 >
                   <Input
                     type="number"
