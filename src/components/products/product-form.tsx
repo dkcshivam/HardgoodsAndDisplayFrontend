@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardBody,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -490,62 +491,32 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               </Field>
             </FieldRow>
 
-            {/* Customs stays with the identity on a single-box product. On a
-                multi-part one each part classifies separately, so it moves
-                into the part cards instead. */}
-            {!form.is_multi_part && (
-              <FieldRow className="sm:grid-cols-2">
-                <Field
-                  label="Customs description"
-                  required
-                  error={errors.customs_description || undefined}
-                  hint="Formal name for shipping documents; often differs from the description."
-                >
-                  <Input
-                    value={form.customs_description}
-                    invalid={Boolean(errors.customs_description)}
-                    onChange={(event) =>
-                      set({ customs_description: event.target.value })
-                    }
-                  />
-                </Field>
-                <Field
-                  label="HSN code"
-                  required
-                  error={errors.hsn_code || undefined}
-                  hint="Determines duty classification."
-                >
-                  <Input
-                    value={form.hsn_code}
-                    invalid={Boolean(errors.hsn_code)}
-                    onChange={(event) => set({ hsn_code: event.target.value })}
-                    className="tabular"
-                  />
-                </Field>
-              </FieldRow>
-            )}
+          </CardBody>
+        </Card>
 
-            <div className="border-t border-border-subtle pt-4">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>
                 Photos<span className="ml-0.5 text-destructive">*</span>
-                <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground">
-                  {form.id
-                    ? "Saved as soon as you add them."
-                    : "Uploaded when you save the product."}
-                </span>
-              </div>
-              {errors.photos && (
-                <p className="mb-2 text-xs text-destructive">{errors.photos}</p>
-              )}
-              <PhotoGallery
-                {...productPhotos}
-                emptyHint={
-                  form.is_multi_part
-                    ? "A photo of the assembled item, so the packer knows what the parts add up to."
-                    : "A photo of the item, so the packer can confirm what is in the carton."
-                }
-              />
+              </CardTitle>
+              <CardDescription>
+                What the item looks like, so a packer can confirm it by eye.
+              </CardDescription>
             </div>
+          </CardHeader>
+          <CardBody>
+            {errors.photos && (
+              <p className="mb-2 text-xs text-destructive">{errors.photos}</p>
+            )}
+            <PhotoGallery
+              {...productPhotos}
+              emptyHint={
+                form.is_multi_part
+                  ? "A photo of the assembled item, so the packer knows what the parts add up to."
+                  : "A photo of the item, so the packer can confirm what is in the carton."
+              }
+            />
           </CardBody>
         </Card>
 
@@ -571,6 +542,45 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                   onSelect={() => setShape(true)}
                 />
               </div>
+            </CardBody>
+          </Card>
+        )}
+
+        {/* A multi-part product classifies part by part, so its customs
+            fields live in the part cards rather than here. */}
+        {!form.is_multi_part && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Customs</CardTitle>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <Field
+                label="Customs description"
+                required
+                error={errors.customs_description || undefined}
+                hint="The formal name for shipping documents; often differs from the description."
+              >
+                <Input
+                  value={form.customs_description}
+                  invalid={Boolean(errors.customs_description)}
+                  onChange={(event) =>
+                    set({ customs_description: event.target.value })
+                  }
+                />
+              </Field>
+              <Field
+                label="HSN code"
+                required
+                error={errors.hsn_code || undefined}
+                hint="Determines duty classification."
+              >
+                <Input
+                  value={form.hsn_code}
+                  invalid={Boolean(errors.hsn_code)}
+                  onChange={(event) => set({ hsn_code: event.target.value })}
+                  className="tabular sm:w-40"
+                />
+              </Field>
             </CardBody>
           </Card>
         )}
