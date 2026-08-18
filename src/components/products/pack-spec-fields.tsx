@@ -131,7 +131,6 @@ export function PackSpecFields({
         label="Packing material weight (kg)"
         required
         error={errors.packing_material_weight_kg || undefined}
-        hint="Padding and filler inside the box, not the box itself."
       >
         <Input
           type="number"
@@ -148,7 +147,6 @@ export function PackSpecFields({
         label="Box weight (kg)"
         required
         error={errors.box_weight_kg || undefined}
-        hint="The empty carton on its own."
       >
         <Input
           type="number"

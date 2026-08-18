@@ -148,7 +148,7 @@ export function PartCard({
             </div>
             <PhotoGallery
               {...photos}
-              emptyHint="A photo of the boxed part tells the packer what to look for."
+              emptyHint=""
             />
           </div>
 

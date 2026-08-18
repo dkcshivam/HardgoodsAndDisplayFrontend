@@ -290,7 +290,7 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                   <option value="">Choose a merchant</option>
                   {(merchants.data?.results ?? []).map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.code} · {item.name}
+                      {item.name}
                     </option>
                   ))}
                 </Select>
