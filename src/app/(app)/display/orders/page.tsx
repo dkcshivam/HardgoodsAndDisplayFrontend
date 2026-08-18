@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Download, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,8 +18,10 @@ import {
   TD,
   EmptyRow,
 } from "@/components/ui/table";
-import { useDisplayOrders, useMerchants } from "@/lib/queries";
+import { useDisplayOrders, useMerchants, useStores } from "@/lib/queries";
 import { useSort } from "@/lib/sort";
+import { downloadOrderTemplate } from "@/lib/order-template";
+import { useToast } from "@/components/ui/toast";
 import { format } from "@/lib/calc";
 
 export default function DisplayOrdersPage() {
@@ -35,6 +37,28 @@ export default function DisplayOrdersPage() {
   });
   const merchants = useMerchants({ is_active: true });
   const rows = data?.results ?? [];
+
+  // The template is a column per store, so it is written from the live list
+  // rather than kept as a file that would fall behind it.
+  const toast = useToast();
+  const stores = useStores({ is_active: true, page_size: 1000 });
+  const [writing, setWriting] = useState(false);
+
+  async function downloadTemplate() {
+    const list = stores.data?.results ?? [];
+    if (list.length === 0) {
+      toast.error("No stores yet — add them before taking a template.");
+      return;
+    }
+    setWriting(true);
+    try {
+      await downloadOrderTemplate(list);
+    } catch {
+      toast.error("Could not build the template.");
+    } finally {
+      setWriting(false);
+    }
+  }
 
   const units = (order: (typeof rows)[number]) =>
     order.lines.reduce((sum, line) => sum + line.quantity, 0);
@@ -56,11 +80,21 @@ export default function DisplayOrdersPage() {
           title="Display orders"
           description="Packed by applying templates until nothing is left over."
           actions={
-            <Button size="sm" asChild>
-              <Link href="/display/orders/new">
-                <Plus /> New order
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={downloadTemplate}
+                disabled={writing || stores.isLoading}
+              >
+                <Download /> {writing ? "Building…" : "Order sheet template"}
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/display/orders/new">
+                  <Plus /> New order
+                </Link>
+              </Button>
+            </div>
           }
         />
 
