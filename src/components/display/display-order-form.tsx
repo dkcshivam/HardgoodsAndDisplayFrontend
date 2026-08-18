@@ -18,6 +18,10 @@ import {
   useSave,
   useStores,
 } from "@/lib/queries";
+import {
+  OrderSheetImport,
+  type FilledLine,
+} from "@/components/display/order-sheet-import";
 import { format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -166,6 +170,24 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
     setRows(rows.filter((_, i) => i !== index));
   }
 
+  /**
+   * Replaces the whole grid with what the sheet said. It only ever runs on a
+   * new order, so there is nothing packed to strand.
+   */
+  function fillFromSheet(storeIds: number[], lines: FilledLine[]) {
+    setChosen(storeIds);
+    setRows(
+      lines.map((line) => ({
+        store: line.store,
+        product: line.product,
+        color: "",
+        quantity: line.quantity,
+      })),
+    );
+    setActive(storeIds[0] ?? null);
+    setErrors({});
+  }
+
   function submit() {
     const found: Record<string, string> = {};
     if (!name.trim()) found.name = "Required";
@@ -286,6 +308,15 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
             </FieldRow>
           </CardBody>
         </Card>
+
+        {!order && (
+          <OrderSheetImport
+            orderName={name}
+            products={catalogue}
+            stores={storeList}
+            onFill={fillFromSheet}
+          />
+        )}
 
         <Card>
           <CardHeader>
