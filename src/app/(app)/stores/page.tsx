@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/dialog";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
+import { ImportGapPanel, type GapItem } from "@/components/display/import-gap-panel";
+import { useImportGap } from "@/lib/import-gap";
+import { key } from "@/lib/order-sheet";
 import { useRemove, useSave, useStores } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
 import type { Store } from "@/types";
@@ -47,13 +50,36 @@ export default function StoresPage() {
   const { data, isLoading } = useStores({ search });
   const rows = data?.results ?? [];
 
+  // An order sheet may have sent us here with a list of stores to add. It is
+  // matched against every store, not the search results, so typing in the box
+  // does not make the list look finished.
+  const gap = useImportGap();
+  const everyStore = useStores({ page_size: 1000 }, { enabled: gap !== null });
+
+  const outstanding = useMemo<GapItem[]>(() => {
+    if (!gap) return [];
+    const known = new Set(
+      (everyStore.data?.results ?? []).map((store) => key(store.name)),
+    );
+    return gap.stores
+      .filter((name) => !known.has(key(name)))
+      .map((name) => ({ id: name, label: name }));
+  }, [gap, everyStore.data]);
+
   const save = useSave<Draft>("stores");
   const remove = useRemove("stores");
   const toast = useToast();
 
   return (
     <main className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto max-w-5xl space-y-5">
+      <div
+        className={
+          gap
+            ? "mx-auto grid max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]"
+            : "mx-auto max-w-5xl"
+        }
+      >
+        <div className="space-y-5">
         <PageHeader
           title="Stores"
           description="Every outlet we ship to. Any order can use any of them."
@@ -131,6 +157,18 @@ export default function StoresPage() {
             </tbody>
           </Table>
         </Card>
+        </div>
+
+        {gap && (
+          <ImportGapPanel
+            title="Stores to add"
+            sheet={gap.sheet}
+            orderName={gap.order_name}
+            items={outstanding}
+            total={gap.stores.length}
+            onAdd={(item) => setEditing({ ...BLANK, name: item.label })}
+          />
+        )}
       </div>
 
       {editing && (

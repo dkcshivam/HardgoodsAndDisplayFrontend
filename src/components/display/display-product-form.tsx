@@ -106,7 +106,14 @@ function withoutPhotos(record: PhotoState): Record<string, unknown> {
   return body;
 }
 
-export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
+export function DisplayProductForm({
+  product,
+  seed,
+}: {
+  product?: DisplayProduct;
+  /** Prefilled when an order sheet named a style the app did not have. */
+  seed?: { style_no: string; style_name: string };
+}) {
   const router = useRouter();
   const toast = useToast();
 
@@ -118,7 +125,7 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
           parts: product.parts.map((part) => ({ ...part, pending_images: [] })),
           pending_images: [],
         }
-      : BLANK,
+      : { ...BLANK, ...seed },
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Keyed by part index — a part's own missing fields, shown inside its card.

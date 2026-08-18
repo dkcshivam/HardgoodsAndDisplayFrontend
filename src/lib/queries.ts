@@ -41,7 +41,10 @@ export const useCategories = (filters?: Filters) =>
   useList<Category>("categories", filters);
 export const useMerchants = (filters?: Filters) =>
   useList<Merchant>("merchants", filters);
-export const useStores = (filters?: Filters) => useList<Store>("stores", filters);
+export const useStores = (
+  filters?: Filters,
+  options?: Partial<UseQueryOptions<Paginated<Store>>>,
+) => useList<Store>("stores", filters, options);
 export const useProducts = (filters?: Filters) =>
   useList<ProductListItem>("products", filters);
 export const useOrders = (filters?: Filters) => useList<Order>("orders", filters);
@@ -141,8 +144,10 @@ export function useRemove(resource: string) {
 
 /* ── Display ──────────────────────────────────────────────────────── */
 
-export const useDisplayProducts = (filters?: Filters) =>
-  useList<DisplayProduct>("display-products", filters);
+export const useDisplayProducts = (
+  filters?: Filters,
+  options?: Partial<UseQueryOptions<Paginated<DisplayProduct>>>,
+) => useList<DisplayProduct>("display-products", filters, options);
 export const usePackTemplates = (filters?: Filters) =>
   useList<PackTemplate>("pack-templates", filters);
 export const useDisplayOrders = (filters?: Filters) =>

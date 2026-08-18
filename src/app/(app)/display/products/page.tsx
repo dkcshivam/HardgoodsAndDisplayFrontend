@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,9 @@ import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/search-input";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
+import { ImportGapPanel, type GapItem } from "@/components/display/import-gap-panel";
+import { useImportGap } from "@/lib/import-gap";
+import { key } from "@/lib/order-sheet";
 import { useCategories, useDisplayProducts } from "@/lib/queries";
 import { format } from "@/lib/calc";
 
@@ -26,9 +30,52 @@ export default function DisplayProductsPage() {
   const categories = useCategories({ is_active: true });
   const rows = data?.results ?? [];
 
+  const router = useRouter();
+  const gap = useImportGap();
+  // Matched against the whole catalogue rather than the filtered table, so a
+  // search or a status filter cannot make the list look finished.
+  const everyProduct = useDisplayProducts(
+    { page_size: 1000 },
+    { enabled: gap !== null },
+  );
+
+  const outstanding = useMemo<GapItem[]>(() => {
+    if (!gap) return [];
+    const byStyle = new Map(
+      (everyProduct.data?.results ?? []).map((item) => [key(item.style_no), item]),
+    );
+
+    const items: GapItem[] = [];
+    for (const want of gap.products) {
+      const found = byStyle.get(key(want.style_no));
+      if (!found) {
+        items.push({ id: want.style_no, label: want.style_no, hint: want.style_name });
+        continue;
+      }
+      // The number is taken but the name does not agree. It cannot be created
+      // twice, so it stays on the list saying why rather than quietly passing.
+      if (key(found.style_name) !== key(want.style_name)) {
+        items.push({
+          id: want.style_no,
+          label: want.style_no,
+          hint: want.style_name,
+          blocked: `on file as “${found.style_name || "no name"}”`,
+        });
+      }
+    }
+    return items;
+  }, [gap, everyProduct.data]);
+
   return (
     <main className="flex-1 overflow-y-auto p-6">
-      <div className="mx-auto max-w-6xl space-y-5">
+      <div
+        className={
+          gap
+            ? "mx-auto grid max-w-7xl gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]"
+            : "mx-auto max-w-6xl"
+        }
+      >
+        <div className="space-y-5">
         <PageHeader
           title="Display products"
           description="Store decor and small goods. Each one ships inside a pack template's box, never its own."
@@ -150,6 +197,23 @@ export default function DisplayProductsPage() {
             </tbody>
           </Table>
         </Card>
+        </div>
+
+        {gap && (
+          <ImportGapPanel
+            title="Products to add"
+            sheet={gap.sheet}
+            orderName={gap.order_name}
+            items={outstanding}
+            total={gap.products.length}
+            onAdd={(item) =>
+              router.push(
+                `/display/products/new?style_no=${encodeURIComponent(item.id)}` +
+                  `&style_name=${encodeURIComponent(item.hint ?? "")}`,
+              )
+            }
+          />
+        )}
       </div>
     </main>
   );
