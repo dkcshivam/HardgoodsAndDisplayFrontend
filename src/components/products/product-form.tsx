@@ -405,9 +405,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
             <h1 className="text-xl font-semibold tracking-tight">
               {form.id ? form.style_no || "Product" : "New product"}
             </h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Every field answers one question: how does this go in a box?
-            </p>
           </div>
           {/* A product on an order cannot go: the order lines and the cartons
               built from them are the record of what shipped. Set it inactive
@@ -452,7 +449,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               label="Description"
               required
               error={errors.description || undefined}
-              hint="Internal or trade name."
             >
               <Input
                 value={form.description}
@@ -554,7 +550,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 label="Customs description"
                 required
                 error={errors.customs_description || undefined}
-                hint="The formal name for shipping documents; often differs from the description."
               >
                 <Input
                   value={form.customs_description}
@@ -568,7 +563,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 label="HSN code"
                 required
                 error={errors.hsn_code || undefined}
-                hint="Determines duty classification."
               >
                 <Input
                   value={form.hsn_code}

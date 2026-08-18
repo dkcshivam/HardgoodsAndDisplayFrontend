@@ -49,7 +49,6 @@ export default function ProductsPage() {
       <div className="mx-auto max-w-6xl space-y-5">
         <PageHeader
           title="Products"
-          description="Describe an item once and it packs correctly forever."
           actions={
             <Button size="sm" asChild>
               <Link href="/products/new">
