@@ -298,8 +298,9 @@ export function OrderSheetImport({
                   ` · ${read.duplicate_stores.length} repeated heading ignored`}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Untick any column that is not a store — a totals or stock column
-                sits in the same run.
+                {chosen.length} of {read.stores.length} counted as stores. Click
+                one to leave it out — a totals or stock column sometimes sits in
+                the same run and is not a store.
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {read.stores.map((name) => {
@@ -319,8 +320,8 @@ export function OrderSheetImport({
                       className={cn(
                         "rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
                         on
-                          ? "border-primary bg-primary-subtle text-primary"
-                          : "border-input text-muted-foreground line-through",
+                          ? "border-border bg-card text-secondary-foreground hover:border-primary/50"
+                          : "border-dashed border-input bg-transparent text-muted-foreground line-through",
                       )}
                     >
                       {name}
@@ -354,15 +355,22 @@ export function OrderSheetImport({
                 <p className="flex items-start gap-2 text-sm">
                   <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
                   <span>
-                    Add these first. The lists follow you to each screen and
-                    shrink as you save.
+                    Add the{" "}
+                    {[
+                      match.missing_stores.length > 0 && "stores",
+                      match.missing_products.length > 0 && "products",
+                    ]
+                      .filter(Boolean)
+                      .join(" and ")}{" "}
+                    below first. The list follows you to that screen and shrinks
+                    as you save.
                   </span>
                 </p>
 
+                {match.missing_stores.length > 0 && (
                 <MissingList
                   icon={<StoreIcon className="size-4" />}
                   title="Stores"
-                  empty="Every store column is known."
                   count={match.missing_stores.length}
                   action="Go to stores"
                   onGo={() => handOff("/stores")}
@@ -373,11 +381,12 @@ export function OrderSheetImport({
                     </li>
                   ))}
                 </MissingList>
+                )}
 
+                {match.missing_products.length > 0 && (
                 <MissingList
                   icon={<Package className="size-4" />}
                   title="Products"
-                  empty="Every style number is known."
                   count={match.missing_products.length}
                   action="Go to products"
                   onGo={() => handOff("/display/products")}
@@ -391,12 +400,13 @@ export function OrderSheetImport({
                       {item.known_as && (
                         <span className="text-warning">
                           {" "}
-                          — already on file as “{item.known_as}”
+                          — on file under the name “{item.known_as}”
                         </span>
                       )}
                     </li>
                   ))}
                 </MissingList>
+                )}
 
                 {clashes.length > 0 && (
                   <p className="text-xs text-muted-foreground">
@@ -418,7 +428,6 @@ export function OrderSheetImport({
 function MissingList({
   icon,
   title,
-  empty,
   count,
   action,
   onGo,
@@ -426,7 +435,6 @@ function MissingList({
 }: {
   icon: React.ReactNode;
   title: string;
-  empty: string;
   count: number;
   action: string;
   onGo: () => void;
@@ -438,22 +446,16 @@ function MissingList({
         <div className="flex items-center gap-2 text-sm font-medium">
           {icon}
           {title}
-          <span className={count > 0 ? "text-warning" : "text-muted-foreground"}>
-            {count > 0 ? `${count} missing` : "all present"}
+          <span className="text-warning">
+            {count} missing
           </span>
         </div>
-        {count > 0 && (
-          <Button variant="secondary" size="sm" onClick={onGo}>
-            {action} <ArrowRight />
-          </Button>
-        )}
+        <Button variant="secondary" size="sm" onClick={onGo}>
+          {action} <ArrowRight />
+        </Button>
       </div>
       <div className="max-h-56 overflow-y-auto px-3.5 py-2.5">
-        {count === 0 ? (
-          <p className="text-xs text-muted-foreground">{empty}</p>
-        ) : (
-          <ul className="space-y-1 text-sm">{children}</ul>
-        )}
+        <ul className="space-y-1 text-sm">{children}</ul>
       </div>
     </div>
   );
