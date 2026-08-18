@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input, Select } from "@/components/ui/input";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
@@ -45,10 +46,17 @@ export default function NewOrderPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const merchants = useMerchants({ is_active: true });
-  const products = useProducts({ status: "active" });
+  const products = useProducts({ status: "active", page_size: 1000 });
   const save = useSave<Record<string, unknown>>("orders");
 
   const catalogue = products.data?.results ?? [];
+  // Style number first: it is what people say out loud. The description is
+  // searched with it, so half a name finds the row too.
+  const productOptions: ComboboxOption[] = catalogue.map((item) => ({
+    value: item.id,
+    label: item.style_no,
+    hint: item.description,
+  }));
   const setLine = (index: number, patch: Partial<LineDraft>) =>
     setLines((all) =>
       all.map((line, i) => (i === index ? { ...line, ...patch } : line)),
@@ -270,23 +278,13 @@ export default function NewOrderPage() {
                 return (
                   <TR key={index}>
                     <TD>
-                      <Select
-                        value={line.product ?? ""}
-                        onChange={(event) =>
-                          setLine(index, {
-                            product: event.target.value
-                              ? Number(event.target.value)
-                              : null,
-                          })
-                        }
-                      >
-                        <option value="">Choose a product</option>
-                        {catalogue.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.style_no} · {item.description}
-                          </option>
-                        ))}
-                      </Select>
+                      <Combobox
+                        value={line.product}
+                        onChange={(value) => setLine(index, { product: value })}
+                        options={productOptions}
+                        placeholder="Choose a product"
+                        searchPlaceholder="Search style no or description…"
+                      />
                     </TD>
                     <TD>
                       <Input

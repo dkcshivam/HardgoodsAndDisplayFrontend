@@ -101,7 +101,9 @@ export function TemplateDialog({
   onSaved?: (template: PackTemplate) => void;
 }) {
   const toast = useToast();
-  const products = useDisplayProducts({ status: "active" });
+  // The whole catalogue: the piece list is searched here, and a design must
+  // be able to reach a style that sits past the first page.
+  const products = useDisplayProducts({ status: "active", page_size: 1000 });
   const save = useSave<Record<string, unknown>, PackTemplate>("pack-templates");
 
   const catalogue = products.data?.results ?? [];
