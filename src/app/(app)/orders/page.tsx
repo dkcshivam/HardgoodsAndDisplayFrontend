@@ -9,8 +9,16 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/search-input";
-import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
+import {
+  Table,
+  THead,
+  SortTH,
+  TR,
+  TD,
+  EmptyRow,
+} from "@/components/ui/table";
 import { useMerchants, useOrders } from "@/lib/queries";
+import { useSort } from "@/lib/sort";
 import { format } from "@/lib/calc";
 
 export default function OrdersPage() {
@@ -27,12 +35,26 @@ export default function OrdersPage() {
   const merchants = useMerchants({ is_active: true });
   const rows = data?.results ?? [];
 
+  const { sort, toggle, sorted } = useSort(rows, {
+    number: (order) => order.number,
+    merchant: (order) => order.merchant_name,
+    ship_to: (order) =>
+      [order.shipping_address.city, order.shipping_address.country]
+        .filter(Boolean)
+        .join(", "),
+    lines: (order) => order.lines.length,
+    ordered: (order) => order.lines.reduce((sum, line) => sum + line.quantity, 0),
+    cartons: (order) => order.carton_count,
+    status: (order) => order.status,
+    created: (order) => order.created_at,
+  });
+
   return (
     <main className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto max-w-6xl space-y-5">
         <PageHeader
           title="Orders"
-          description="What each merchant asked for, and how far along it is."
+          description=""
           actions={
             <Button size="sm" asChild>
               <Link href="/orders/new">
@@ -77,14 +99,30 @@ export default function OrdersPage() {
           <Table>
             <THead>
               <tr>
-                <TH>Order</TH>
-                <TH>Merchant</TH>
-                <TH>Ship to</TH>
-                <TH className="text-right">Lines</TH>
-                <TH className="text-right">Ordered</TH>
-                <TH className="text-right">Cartons</TH>
-                <TH>Status</TH>
-                <TH>Created</TH>
+                <SortTH column="number" sort={sort} onSort={toggle}>
+                  Order
+                </SortTH>
+                <SortTH column="merchant" sort={sort} onSort={toggle}>
+                  Merchant
+                </SortTH>
+                <SortTH column="ship_to" sort={sort} onSort={toggle}>
+                  Ship to
+                </SortTH>
+                <SortTH column="lines" sort={sort} onSort={toggle} className="text-right">
+                  Lines
+                </SortTH>
+                <SortTH column="ordered" sort={sort} onSort={toggle} className="text-right">
+                  Ordered
+                </SortTH>
+                <SortTH column="cartons" sort={sort} onSort={toggle} className="text-right">
+                  Cartons
+                </SortTH>
+                <SortTH column="status" sort={sort} onSort={toggle}>
+                  Status
+                </SortTH>
+                <SortTH column="created" sort={sort} onSort={toggle}>
+                  Created
+                </SortTH>
               </tr>
             </THead>
             <tbody>
@@ -97,7 +135,7 @@ export default function OrdersPage() {
               {!isLoading && rows.length === 0 && (
                 <EmptyRow colSpan={8}>No orders match these filters.</EmptyRow>
               )}
-              {rows.map((order) => {
+              {sorted.map((order) => {
                 const ordered = order.lines.reduce(
                   (sum, line) => sum + line.quantity,
                   0,

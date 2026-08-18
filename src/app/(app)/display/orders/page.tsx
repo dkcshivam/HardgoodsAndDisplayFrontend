@@ -9,8 +9,17 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/search-input";
-import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
+import {
+  Table,
+  THead,
+  TH,
+  SortTH,
+  TR,
+  TD,
+  EmptyRow,
+} from "@/components/ui/table";
 import { useDisplayOrders, useMerchants } from "@/lib/queries";
+import { useSort } from "@/lib/sort";
 import { format } from "@/lib/calc";
 
 export default function DisplayOrdersPage() {
@@ -26,6 +35,19 @@ export default function DisplayOrdersPage() {
   });
   const merchants = useMerchants({ is_active: true });
   const rows = data?.results ?? [];
+
+  const units = (order: (typeof rows)[number]) =>
+    order.lines.reduce((sum, line) => sum + line.quantity, 0);
+
+  const { sort, toggle, sorted } = useSort(rows, {
+    number: (order) => order.number,
+    merchant: (order) => order.merchant_name,
+    stores: (order) => new Set(order.lines.map((line) => line.store)).size,
+    ordered: units,
+    cartons: (order) => order.carton_count,
+    status: (order) => order.status,
+    created: (order) => order.created_at,
+  });
 
   return (
     <main className="flex-1 overflow-y-auto p-6">
@@ -77,13 +99,37 @@ export default function DisplayOrdersPage() {
           <Table className="table-fixed">
             <THead>
               <tr>
-                <TH className="w-[20%]">Order</TH>
-                <TH className="w-[14%]">Merchant</TH>
-                <TH className="w-[11%]">Stores</TH>
-                <TH className="w-[13%] text-center">Units ordered</TH>
-                <TH className="w-[10%] text-center">Cartons</TH>
-                <TH className="w-[11%]">Status</TH>
-                <TH className="w-[12%]">Created</TH>
+                <SortTH column="number" sort={sort} onSort={toggle} className="w-[20%]">
+                  Order
+                </SortTH>
+                <SortTH column="merchant" sort={sort} onSort={toggle} className="w-[14%]">
+                  Merchant
+                </SortTH>
+                <SortTH column="stores" sort={sort} onSort={toggle} className="w-[11%]">
+                  Stores
+                </SortTH>
+                <SortTH
+                  column="ordered"
+                  sort={sort}
+                  onSort={toggle}
+                  className="w-[13%] text-center"
+                >
+                  Units ordered
+                </SortTH>
+                <SortTH
+                  column="cartons"
+                  sort={sort}
+                  onSort={toggle}
+                  className="w-[10%] text-center"
+                >
+                  Cartons
+                </SortTH>
+                <SortTH column="status" sort={sort} onSort={toggle} className="w-[11%]">
+                  Status
+                </SortTH>
+                <SortTH column="created" sort={sort} onSort={toggle} className="w-[12%]">
+                  Created
+                </SortTH>
                 <TH className="w-[9%]" />
               </tr>
             </THead>
@@ -101,7 +147,7 @@ export default function DisplayOrdersPage() {
                   No display orders match these filters.
                 </EmptyRow>
               )}
-              {rows.map((order) => {
+              {sorted.map((order) => {
                 const ordered = order.lines.reduce(
                   (sum, line) => sum + line.quantity,
                   0,

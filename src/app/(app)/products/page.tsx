@@ -9,24 +9,47 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/search-input";
-import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
+import {
+  Table,
+  THead,
+  TH,
+  SortTH,
+  TR,
+  TD,
+  EmptyRow,
+} from "@/components/ui/table";
 import { useCategories, useProducts } from "@/lib/queries";
+import { useSort } from "@/lib/sort";
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("active");
 
-  const { data, isLoading, isError } = useProducts({ search, category, status });
+  // The whole list, because sorting a page of it would order the wrong rows.
+  const { data, isLoading, isError } = useProducts({
+    search,
+    category,
+    status,
+    page_size: 1000,
+  });
   const categories = useCategories({ is_active: true });
   const rows = data?.results ?? [];
+
+  const { sort, toggle, sorted } = useSort(rows, {
+    style_no: (row) => row.style_no,
+    description: (row) => row.description,
+    category: (row) => row.category_name,
+    // Single-box first, then by how many pieces it breaks into.
+    packs_as: (row) => (row.is_multi_part ? row.part_count : 0),
+  });
 
   return (
     <main className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto max-w-6xl space-y-5">
         <PageHeader
           title="Products"
-          description="Packing recipes. Describe an item once and it packs correctly forever."
+          description="Describe an item once and it packs correctly forever."
           actions={
             <Button size="sm" asChild>
               <Link href="/products/new">
@@ -70,10 +93,18 @@ export default function ProductsPage() {
             <THead>
               <tr>
                 <TH className="w-14" />
-                <TH>Style No</TH>
-                <TH>Description</TH>
-                <TH>Category</TH>
-                <TH>Packs as</TH>
+                <SortTH column="style_no" sort={sort} onSort={toggle}>
+                  Style No
+                </SortTH>
+                <SortTH column="description" sort={sort} onSort={toggle}>
+                  Description
+                </SortTH>
+                <SortTH column="category" sort={sort} onSort={toggle}>
+                  Category
+                </SortTH>
+                <SortTH column="packs_as" sort={sort} onSort={toggle}>
+                  Packs as
+                </SortTH>
               </tr>
             </THead>
             <tbody>
@@ -88,7 +119,7 @@ export default function ProductsPage() {
                   Nothing matches. Try clearing the filters.
                 </EmptyRow>
               )}
-              {rows.map((row) => (
+              {sorted.map((row) => (
                 <TR key={row.id}>
                   <TD className="pr-0">
                     {row.main_image ? (

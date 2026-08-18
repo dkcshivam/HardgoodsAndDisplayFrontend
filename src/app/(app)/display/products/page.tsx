@@ -10,25 +10,47 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/search-input";
-import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
+import {
+  Table,
+  THead,
+  SortTH,
+  TR,
+  TD,
+  EmptyRow,
+} from "@/components/ui/table";
 import { ImportGapPanel, type GapItem } from "@/components/display/import-gap-panel";
 import { useImportGap } from "@/lib/import-gap";
 import { find, index, sameName } from "@/lib/order-sheet";
 import { useCategories, useDisplayProducts } from "@/lib/queries";
 import { format } from "@/lib/calc";
+import { useSort } from "@/lib/sort";
 
 export default function DisplayProductsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
 
+  // The whole list, because sorting a page of it would order the wrong rows.
   const { data, isLoading, isError } = useDisplayProducts({
     search,
     status,
     category,
+    page_size: 1000,
   });
   const categories = useCategories({ is_active: true });
   const rows = data?.results ?? [];
+
+  const { sort, toggle, sorted } = useSort(rows, {
+    style_no: (row) => row.style_no,
+    description: (row) => row.description,
+    category: (row) => row.category_name,
+    hsn: (row) => row.hsn_code,
+    // The cell shows three figures; length is the one people scan by.
+    size: (row) => row.length_in,
+    weight: (row) => row.product_weight_kg,
+    cbm: (row) => row.unit_cbm,
+    status: (row) => row.status,
+  });
 
   const router = useRouter();
   const gap = useImportGap();
@@ -119,14 +141,30 @@ export default function DisplayProductsPage() {
           <Table>
             <THead>
               <tr>
-                <TH>Style No</TH>
-                <TH>Description</TH>
-                <TH>Category</TH>
-                <TH>HSN</TH>
-                <TH className="text-center">L × W × H (in)</TH>
-                <TH className="text-right">Weight (kg)</TH>
-                <TH className="text-right">CBM</TH>
-                <TH>Status</TH>
+                <SortTH column="style_no" sort={sort} onSort={toggle}>
+                  Style No
+                </SortTH>
+                <SortTH column="description" sort={sort} onSort={toggle}>
+                  Description
+                </SortTH>
+                <SortTH column="category" sort={sort} onSort={toggle}>
+                  Category
+                </SortTH>
+                <SortTH column="hsn" sort={sort} onSort={toggle}>
+                  HSN
+                </SortTH>
+                <SortTH column="size" sort={sort} onSort={toggle} className="text-center">
+                  L × W × H (in)
+                </SortTH>
+                <SortTH column="weight" sort={sort} onSort={toggle} className="text-right">
+                  Weight (kg)
+                </SortTH>
+                <SortTH column="cbm" sort={sort} onSort={toggle} className="text-right">
+                  CBM
+                </SortTH>
+                <SortTH column="status" sort={sort} onSort={toggle}>
+                  Status
+                </SortTH>
               </tr>
             </THead>
             <tbody>
@@ -144,7 +182,7 @@ export default function DisplayProductsPage() {
                   templates.
                 </EmptyRow>
               )}
-              {rows.map((product) => (
+              {sorted.map((product) => (
                 <TR key={product.id}>
                   <TD>
                     <Link

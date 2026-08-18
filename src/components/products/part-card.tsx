@@ -108,7 +108,9 @@ export function PartCard({
             <Field label="Description">
               <Input
                 value={part.description}
-                onChange={(event) => onChange({ description: event.target.value })}
+                onChange={(event) =>
+                  onChange({ description: event.target.value })
+                }
               />
             </Field>
           </FieldRow>
@@ -118,7 +120,6 @@ export function PartCard({
               label="Customs description"
               required
               error={errors.customs_description || undefined}
-              hint="Formal name for shipping documents."
             >
               <Input
                 value={part.customs_description}
@@ -132,7 +133,6 @@ export function PartCard({
               label="HSN code"
               required
               error={errors.hsn_code || undefined}
-              hint="Parts can classify differently."
             >
               <Input
                 value={part.hsn_code}
