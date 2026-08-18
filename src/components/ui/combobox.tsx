@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Popover as Primitive } from "radix-ui";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, ImageOff, Search } from "lucide-react";
 import { cn, matchesTerms, searchTerms } from "@/lib/utils";
 
 export interface ComboboxOption {
@@ -13,6 +13,34 @@ export interface ComboboxOption {
   hint?: string;
   /** Searched but never shown — a description behind a style name. */
   keywords?: string;
+  /**
+   * A thumbnail. Null keeps the placeholder, so rows stay in line whether or
+   * not a product has a photo; leave it off entirely and no column appears.
+   */
+  image?: string | null;
+}
+
+function Thumb({ src, className }: { src?: string | null; className?: string }) {
+  return src ? (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={src}
+      alt=""
+      className={cn(
+        "shrink-0 rounded border border-border object-cover",
+        className,
+      )}
+    />
+  ) : (
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded border border-dashed border-border text-muted-foreground/50",
+        className,
+      )}
+    >
+      <ImageOff className="size-3" />
+    </div>
+  );
 }
 
 /**
@@ -57,6 +85,8 @@ export function Combobox({
     : options;
 
   const chosen = options.find((option) => option.value === value);
+  // Only make room for pictures when the caller deals in them.
+  const showThumbs = options.some((option) => option.image !== undefined);
 
   function pick(option: ComboboxOption) {
     onChange(option.value);
@@ -111,14 +141,17 @@ export function Combobox({
           )}
         >
           {chosen ? (
-            <>
-              <span className="tabular font-medium">{chosen.label}</span>
-              {chosen.hint && (
-                <span className="ml-1.5 text-muted-foreground">
-                  {chosen.hint}
-                </span>
-              )}
-            </>
+            <span className="flex items-center gap-2">
+              {showThumbs && <Thumb src={chosen.image} className="size-6" />}
+              <span className="truncate">
+                <span className="tabular font-medium">{chosen.label}</span>
+                {chosen.hint && (
+                  <span className="ml-1.5 text-muted-foreground">
+                    {chosen.hint}
+                  </span>
+                )}
+              </span>
+            </span>
           ) : (
             placeholder
           )}
@@ -175,6 +208,7 @@ export function Combobox({
                       : "text-transparent",
                   )}
                 />
+                {showThumbs && <Thumb src={option.image} className="size-8" />}
                 <span className="min-w-0">
                   <span className="tabular block truncate font-medium">
                     {option.label}

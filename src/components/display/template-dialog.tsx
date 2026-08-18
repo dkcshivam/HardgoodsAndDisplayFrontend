@@ -26,10 +26,10 @@ import {
 } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import { cn, matchesTerms, searchTerms } from "@/lib/utils";
+import { mainImage } from "@/lib/images";
 import type {
   DisplayProduct,
   PackTemplate,
-  ProductImage,
   QuantityRow,
 } from "@/types";
 
@@ -645,12 +645,6 @@ export function TemplateDialog({
 
 function pieceLabel(styleNo: string, partName: string): string {
   return partName ? `${styleNo} — ${partName}` : styleNo;
-}
-
-/** The photo to stand for a piece — the one marked main, else the first. */
-function mainImage(images?: ProductImage[]): string | null {
-  if (!images || images.length === 0) return null;
-  return (images.find((image) => image.is_main) ?? images[0]).image;
 }
 
 /** `name` on PackTemplate. Longer than this and the API rejects the save. */

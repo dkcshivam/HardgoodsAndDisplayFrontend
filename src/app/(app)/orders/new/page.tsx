@@ -56,6 +56,7 @@ export default function NewOrderPage() {
     value: item.id,
     label: item.style_no,
     hint: item.description,
+    image: item.main_image,
   }));
   const setLine = (index: number, patch: Partial<LineDraft>) =>
     setLines((all) =>

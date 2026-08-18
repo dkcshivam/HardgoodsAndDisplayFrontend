@@ -23,6 +23,7 @@ import {
   type FilledLine,
 } from "@/components/display/order-sheet-import";
 import { format } from "@/lib/calc";
+import { mainImage } from "@/lib/images";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { DisplayOrder } from "@/types";
@@ -76,6 +77,7 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
     label: item.style_no,
     hint: item.style_name || item.description,
     keywords: item.description,
+    image: mainImage(item.images),
   }));
   const onOrder = storeList.filter((store) => chosen.includes(store.id));
   const activeStore = onOrder.find((store) => store.id === active) ?? onOrder[0];
