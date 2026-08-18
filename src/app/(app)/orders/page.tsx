@@ -85,18 +85,17 @@ export default function OrdersPage() {
                 <TH className="text-right">Cartons</TH>
                 <TH>Status</TH>
                 <TH>Created</TH>
-                <TH />
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={9}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={8}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={9}>
+                <EmptyRow colSpan={8}>
                   <span className="text-destructive">Could not load orders.</span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={9}>No orders match these filters.</EmptyRow>
+                <EmptyRow colSpan={8}>No orders match these filters.</EmptyRow>
               )}
               {rows.map((order) => {
                 const ordered = order.lines.reduce(
@@ -145,14 +144,6 @@ export default function OrdersPage() {
                     </TD>
                     <TD className="text-muted-foreground">
                       {format.date(order.created_at)}
-                    </TD>
-                    <TD className="text-right">
-                      <Link
-                        href={`/orders/${order.id}/packing`}
-                        className="text-xs font-medium text-primary hover:underline"
-                      >
-                        Pack →
-                      </Link>
                     </TD>
                   </TR>
                 );
