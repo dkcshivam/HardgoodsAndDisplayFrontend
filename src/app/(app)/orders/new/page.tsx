@@ -58,6 +58,7 @@ export default function NewOrderPage() {
     const found: Record<string, string> = {};
     if (!name.trim()) found.name = "Required";
     if (!merchant) found.merchant = "Required";
+    if (!buyerName.trim()) found.buyer_name = "Required";
 
     const filled = lines.filter((line) => line.product !== null);
     if (filled.length === 0) found.lines = "Add at least one product.";
@@ -152,7 +153,11 @@ export default function NewOrderPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Buyer name">
+              <Field
+                label="Buyer name"
+                required
+                error={errors.buyer_name || undefined}
+              >
                 <Input
                   value={buyerName}
                   onChange={(event) => setBuyerName(event.target.value)}

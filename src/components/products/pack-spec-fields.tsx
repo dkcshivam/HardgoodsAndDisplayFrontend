@@ -34,11 +34,13 @@ export function PackSpecFields({
   onChange,
   idPrefix,
   subject = "product",
+  errors = {},
 }: {
   value: PackSpecDraft;
   onChange: (patch: Partial<PackSpecDraft>) => void;
   idPrefix: string;
   subject?: "product" | "part";
+  errors?: Record<string, string>;
 }) {
   const net = netWeight(value.product_weight_kg, value.packing_material_weight_kg);
   const gross = grossWeight(
@@ -51,33 +53,51 @@ export function PackSpecFields({
   return (
     <div className="space-y-4">
       <FieldRow>
-        <Field label="Box length (in)" htmlFor={`${idPrefix}-l`}>
+        <Field
+          label="Box length (in)"
+          htmlFor={`${idPrefix}-l`}
+          required
+          error={errors.box_length_in || undefined}
+        >
           <Input
             id={`${idPrefix}-l`}
             type="number"
             step="0.01"
+            invalid={Boolean(errors.box_length_in)}
             value={value.box_length_in ?? ""}
             onChange={(event) =>
               onChange({ box_length_in: toNumber(event.target.value) })
             }
           />
         </Field>
-        <Field label="Box width (in)" htmlFor={`${idPrefix}-w`}>
+        <Field
+          label="Box width (in)"
+          htmlFor={`${idPrefix}-w`}
+          required
+          error={errors.box_width_in || undefined}
+        >
           <Input
             id={`${idPrefix}-w`}
             type="number"
             step="0.01"
+            invalid={Boolean(errors.box_width_in)}
             value={value.box_width_in ?? ""}
             onChange={(event) =>
               onChange({ box_width_in: toNumber(event.target.value) })
             }
           />
         </Field>
-        <Field label="Box height (in)" htmlFor={`${idPrefix}-h`}>
+        <Field
+          label="Box height (in)"
+          htmlFor={`${idPrefix}-h`}
+          required
+          error={errors.box_height_in || undefined}
+        >
           <Input
             id={`${idPrefix}-h`}
             type="number"
             step="0.01"
+            invalid={Boolean(errors.box_height_in)}
             value={value.box_height_in ?? ""}
             onChange={(event) =>
               onChange({ box_height_in: toNumber(event.target.value) })
@@ -88,6 +108,8 @@ export function PackSpecFields({
 
       <Field
         label={subject === "part" ? "Part weight (kg)" : "Product weight (kg)"}
+        required
+        error={errors.product_weight_kg || undefined}
         hint={
           subject === "part"
             ? "The bare part with no packaging."
@@ -97,6 +119,7 @@ export function PackSpecFields({
         <Input
           type="number"
           step="0.001"
+          invalid={Boolean(errors.product_weight_kg)}
           value={value.product_weight_kg ?? ""}
           onChange={(event) =>
             onChange({ product_weight_kg: toNumber(event.target.value) })
@@ -106,11 +129,14 @@ export function PackSpecFields({
 
       <Field
         label="Packing material weight (kg)"
+        required
+        error={errors.packing_material_weight_kg || undefined}
         hint="Padding and filler inside the box, not the box itself."
       >
         <Input
           type="number"
           step="0.001"
+          invalid={Boolean(errors.packing_material_weight_kg)}
           value={value.packing_material_weight_kg ?? ""}
           onChange={(event) =>
             onChange({ packing_material_weight_kg: toNumber(event.target.value) })
@@ -118,10 +144,16 @@ export function PackSpecFields({
         />
       </Field>
 
-      <Field label="Box weight (kg)" hint="The empty carton on its own.">
+      <Field
+        label="Box weight (kg)"
+        required
+        error={errors.box_weight_kg || undefined}
+        hint="The empty carton on its own."
+      >
         <Input
           type="number"
           step="0.001"
+          invalid={Boolean(errors.box_weight_kg)}
           value={value.box_weight_kg ?? ""}
           onChange={(event) =>
             onChange({ box_weight_kg: toNumber(event.target.value) })

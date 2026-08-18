@@ -170,6 +170,7 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
     const found: Record<string, string> = {};
     if (!name.trim()) found.name = "Required";
     if (!merchant) found.merchant = "Required";
+    if (!buyerName.trim()) found.buyer_name = "Required";
     if (onOrder.length === 0) found.stores = "Choose at least one store.";
 
     const complete = rows.filter((row) => row.product !== null && row.quantity);
@@ -272,7 +273,11 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                   ))}
                 </Select>
               </Field>
-              <Field label="Buyer name">
+              <Field
+                label="Buyer name"
+                required
+                error={errors.buyer_name || undefined}
+              >
                 <Input
                   value={buyerName}
                   onChange={(event) => setBuyerName(event.target.value)}

@@ -39,6 +39,13 @@ import {
 } from "@/lib/queries";
 import { cbm, grossWeight, format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
+import {
+  customsErrors,
+  hasPhoto,
+  packSpecErrors,
+  missingNumber,
+  REQUIRED,
+} from "@/lib/required";
 import type { Product, ProductImage, ProductStatus } from "@/types";
 
 export interface ProductDraft extends PackSpecDraft {
@@ -128,6 +135,10 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
   const toast = useToast();
   const [form, setForm] = useState<ProductDraft>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Keyed by part index — a part's own missing fields, shown inside its card.
+  const [partErrors, setPartErrors] = useState<
+    Record<number, Record<string, string>>
+  >({});
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -288,15 +299,43 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
 
   async function submit() {
     const found: Record<string, string> = {};
-    if (!form.style_no.trim()) found.style_no = "Required";
-    if (!form.description.trim()) found.description = "Required";
+    if (!form.style_no.trim()) found.style_no = REQUIRED;
+    if (!form.description.trim()) found.description = REQUIRED;
+    if (!hasPhoto(form)) found.photos = "Add at least one photo.";
+
+    // A single-box product answers for itself; a multi-part one answers per
+    // part, because that is where its cartons and customs lines live.
+    const foundParts: Record<number, Record<string, string>> = {};
     if (form.is_multi_part) {
-      if (form.parts.length < 2)
+      if (form.parts.length < 2) {
         found.parts = "A multi-part product needs at least two parts.";
-      else if (form.parts.some((part) => !part.name.trim()))
-        found.parts = "Every part needs a name.";
+      } else {
+        form.parts.forEach((part, index) => {
+          const partFound = {
+            ...customsErrors(part),
+            ...packSpecErrors(part),
+          };
+          if (!part.name.trim()) partFound.name = REQUIRED;
+          if (Object.keys(partFound).length > 0) foundParts[index] = partFound;
+        });
+        if (Object.keys(foundParts).length > 0) {
+          const numbers = Object.keys(foundParts).map((i) => Number(i) + 1);
+          found.parts = `Part ${numbers.join(", ")} ${
+            numbers.length === 1 ? "is" : "are"
+          } missing required fields — open ${
+            numbers.length === 1 ? "it" : "them"
+          } below.`;
+        }
+      }
+    } else {
+      Object.assign(found, customsErrors(form), packSpecErrors(form));
+      if (missingNumber(form.pack_per_box) || form.pack_per_box < 1) {
+        found.pack_per_box = "At least 1.";
+      }
     }
+
     setErrors(found);
+    setPartErrors(foundParts);
     if (Object.keys(found).length > 0) {
       toast.error("Fix the highlighted fields.");
       return;
@@ -458,18 +497,27 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               <FieldRow className="sm:grid-cols-2">
                 <Field
                   label="Customs description"
+                  required
+                  error={errors.customs_description || undefined}
                   hint="Formal name for shipping documents; often differs from the description."
                 >
                   <Input
                     value={form.customs_description}
+                    invalid={Boolean(errors.customs_description)}
                     onChange={(event) =>
                       set({ customs_description: event.target.value })
                     }
                   />
                 </Field>
-                <Field label="HSN code" hint="Determines duty classification.">
+                <Field
+                  label="HSN code"
+                  required
+                  error={errors.hsn_code || undefined}
+                  hint="Determines duty classification."
+                >
                   <Input
                     value={form.hsn_code}
+                    invalid={Boolean(errors.hsn_code)}
                     onChange={(event) => set({ hsn_code: event.target.value })}
                     className="tabular"
                   />
@@ -479,13 +527,16 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
 
             <div className="border-t border-border-subtle pt-4">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Photos
+                Photos<span className="ml-0.5 text-destructive">*</span>
                 <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground">
                   {form.id
                     ? "Saved as soon as you add them."
                     : "Uploaded when you save the product."}
                 </span>
               </div>
+              {errors.photos && (
+                <p className="mb-2 text-xs text-destructive">{errors.photos}</p>
+              )}
               <PhotoGallery
                 {...productPhotos}
                 emptyHint={
@@ -533,11 +584,14 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               <CardBody className="space-y-4">
                 <Field
                   label="Pack per box"
+                  required
+                  error={errors.pack_per_box || undefined}
                   hint="How many units fit in one carton. Drives carton splitting."
                 >
                   <Input
                     type="number"
                     min={1}
+                    invalid={Boolean(errors.pack_per_box)}
                     value={form.pack_per_box}
                     onChange={(event) =>
                       set({ pack_per_box: Number(event.target.value) || 1 })
@@ -549,6 +603,7 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                   value={form}
                   onChange={set}
                   idPrefix="product"
+                  errors={errors}
                 />
               </CardBody>
             </Card>
@@ -646,6 +701,7 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                     photos={partPhotos(index)}
                     defaultOpen={index === 0}
                     canRemove={form.parts.length > 2}
+                    errors={partErrors[index]}
                     onChange={(patch) => setPart(index, patch)}
                     onRemove={() =>
                       set({

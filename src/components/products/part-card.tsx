@@ -42,6 +42,7 @@ export function PartCard({
   onRemove,
   canRemove,
   defaultOpen,
+  errors = {},
 }: {
   part: PartDraft;
   index: number;
@@ -50,6 +51,7 @@ export function PartCard({
   onRemove: () => void;
   canRemove: boolean;
   defaultOpen?: boolean;
+  errors?: Record<string, string>;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
@@ -114,18 +116,27 @@ export function PartCard({
           <FieldRow className="sm:grid-cols-2">
             <Field
               label="Customs description"
+              required
+              error={errors.customs_description || undefined}
               hint="Formal name for shipping documents."
             >
               <Input
                 value={part.customs_description}
+                invalid={Boolean(errors.customs_description)}
                 onChange={(event) =>
                   onChange({ customs_description: event.target.value })
                 }
               />
             </Field>
-            <Field label="HSN code" hint="Parts can classify differently.">
+            <Field
+              label="HSN code"
+              required
+              error={errors.hsn_code || undefined}
+              hint="Parts can classify differently."
+            >
               <Input
                 value={part.hsn_code}
+                invalid={Boolean(errors.hsn_code)}
                 onChange={(event) => onChange({ hsn_code: event.target.value })}
               />
             </Field>
@@ -188,6 +199,7 @@ export function PartCard({
               onChange={onChange}
               idPrefix={`part-${index}`}
               subject="part"
+              errors={errors}
             />
           </div>
         </div>

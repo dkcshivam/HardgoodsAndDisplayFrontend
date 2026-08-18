@@ -29,6 +29,12 @@ import {
 import { useCategories, useDisplayPhotoActions, useSave } from "@/lib/queries";
 import { cbm, format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
+import {
+  customsErrors,
+  hasPhoto,
+  missingNumber,
+  REQUIRED,
+} from "@/lib/required";
 import type { DisplayProduct, ProductImage } from "@/types";
 
 type Draft = {
@@ -73,6 +79,25 @@ interface PhotoState {
   pending_images: PendingPhoto[];
 }
 
+/** Size and weight, required on whatever piece actually goes in a carton. */
+function pieceErrors(piece: {
+  length_in: number | null;
+  width_in: number | null;
+  height_in: number | null;
+  product_weight_kg: number | null;
+}): Record<string, string> {
+  const found: Record<string, string> = {};
+  for (const key of [
+    "length_in",
+    "width_in",
+    "height_in",
+    "product_weight_kg",
+  ] as const) {
+    if (missingNumber(piece[key])) found[key] = REQUIRED;
+  }
+  return found;
+}
+
 /** Photos travel on their own endpoint, so they never ride the product body. */
 function withoutPhotos(record: PhotoState): Record<string, unknown> {
   const body: Record<string, unknown> = { ...record };
@@ -96,6 +121,10 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
       : BLANK,
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Keyed by part index — a part's own missing fields, shown inside its card.
+  const [partErrors, setPartErrors] = useState<
+    Record<number, Record<string, string>>
+  >({});
   const [uploading, setUploading] = useState(false);
 
   const categories = useCategories({ is_active: true });
@@ -256,14 +285,40 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
 
   async function submit() {
     const found: Record<string, string> = {};
-    if (!draft.style_no.trim()) found.style_no = "Required";
+    if (!draft.style_no.trim()) found.style_no = REQUIRED;
+    if (!hasPhoto(draft)) found.photos = "Add at least one photo.";
+
+    // A display product owns no box, so what it must answer is its own size
+    // and weight — a template cannot check its fit without them. On a
+    // multi-part product each part answers separately.
+    const foundParts: Record<number, Record<string, string>> = {};
     if (draft.is_multi_part) {
-      if (draft.parts.length < 2) found.parts = "At least two parts";
-      else if (draft.parts.some((part) => !part.name.trim()))
-        found.parts = "Every part needs a name";
+      if (draft.parts.length < 2) {
+        found.parts = "At least two parts";
+      } else {
+        draft.parts.forEach((part, index) => {
+          const partFound: Record<string, string> = {
+            ...customsErrors(part),
+            ...pieceErrors(part),
+          };
+          if (!part.name.trim()) partFound.name = REQUIRED;
+          if (Object.keys(partFound).length > 0) foundParts[index] = partFound;
+        });
+        if (Object.keys(foundParts).length > 0) {
+          const numbers = Object.keys(foundParts).map((i) => Number(i) + 1);
+          found.parts = `Part ${numbers.join(", ")} ${
+            numbers.length === 1 ? "is" : "are"
+          } missing required fields — open ${
+            numbers.length === 1 ? "it" : "them"
+          } below.`;
+        }
+      }
+    } else {
+      Object.assign(found, customsErrors(draft), pieceErrors(draft));
     }
 
     setErrors(found);
+    setPartErrors(foundParts);
     if (Object.keys(found).length > 0) {
       toast.error("Fix the highlighted fields.");
       return;
@@ -379,13 +434,18 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Photos</CardTitle>
+              <CardTitle>
+                Photos<span className="ml-0.5 text-destructive">*</span>
+              </CardTitle>
               <CardDescription>
                 What the item looks like, so a packer can confirm it by eye.
               </CardDescription>
             </div>
           </CardHeader>
           <CardBody>
+            {errors.photos && (
+              <p className="mb-2 text-xs text-destructive">{errors.photos}</p>
+            )}
             <PhotoGallery
               {...productPhotos}
               emptyHint={
@@ -450,18 +510,26 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
           <CardBody className="space-y-4">
             <Field
               label="Customs description"
+              required
+              error={errors.customs_description || undefined}
               hint="The formal name for shipping documents; often differs from the description."
             >
               <Input
                 value={draft.customs_description}
+                invalid={Boolean(errors.customs_description)}
                 onChange={(event) =>
                   set({ customs_description: event.target.value })
                 }
               />
             </Field>
-            <Field label="HSN code">
+            <Field
+              label="HSN code"
+              required
+              error={errors.hsn_code || undefined}
+            >
               <Input
                 value={draft.hsn_code}
+                invalid={Boolean(errors.hsn_code)}
                 onChange={(event) => set({ hsn_code: event.target.value })}
                 className="tabular sm:w-40"
               />
@@ -506,6 +574,7 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
                     set({ parts: draft.parts.filter((_, i) => i !== index) })
                   }
                   canRemove={draft.parts.length > 2}
+                  errors={partErrors[index]}
                 />
               ))}
               <DerivedField
@@ -525,6 +594,12 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
           <CardBody className="space-y-4">
             <Field
               label="Dimensions (in)"
+              required
+              error={
+                errors.length_in || errors.width_in || errors.height_in
+                  ? "All three are required."
+                  : undefined
+              }
               hint="The item itself. Used for customs and to warn when a template's box is mostly air."
             >
               <div className="flex items-center gap-2">
@@ -533,6 +608,7 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
                     key={key}
                     type="number"
                     step="0.01"
+                    invalid={Boolean(errors[key])}
                     value={draft[key] ?? ""}
                     onChange={(event) =>
                       set({ [key]: number(event.target.value) } as Partial<Draft>)
@@ -544,10 +620,16 @@ export function DisplayProductForm({ product }: { product?: DisplayProduct }) {
               </div>
             </Field>
 
-            <Field label="Product weight (kg)" hint="The bare item, no packaging.">
+            <Field
+              label="Product weight (kg)"
+              required
+              error={errors.product_weight_kg || undefined}
+              hint="The bare item, no packaging."
+            >
               <Input
                 type="number"
                 step="0.001"
+                invalid={Boolean(errors.product_weight_kg)}
                 value={draft.product_weight_kg ?? ""}
                 onChange={(event) =>
                   set({ product_weight_kg: number(event.target.value) })

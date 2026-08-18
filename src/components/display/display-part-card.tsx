@@ -54,6 +54,7 @@ export function DisplayPartCard({
   canRemove,
   photos,
   defaultOpen = false,
+  errors = {},
 }: {
   part: DisplayPartDraft;
   index: number;
@@ -62,6 +63,7 @@ export function DisplayPartCard({
   canRemove: boolean;
   photos: PhotoBinding;
   defaultOpen?: boolean;
+  errors?: Record<string, string>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const number = (value: string) => (value === "" ? null : Number(value));
@@ -131,31 +133,49 @@ export function DisplayPartCard({
           <FieldRow className="sm:grid-cols-2">
             <Field
               label="Customs description"
+              required
+              error={errors.customs_description || undefined}
               hint="Parts of different materials classify differently."
             >
               <Input
                 value={part.customs_description}
+                invalid={Boolean(errors.customs_description)}
                 onChange={(event) =>
                   onChange({ customs_description: event.target.value })
                 }
               />
             </Field>
-            <Field label="HSN code">
+            <Field
+              label="HSN code"
+              required
+              error={errors.hsn_code || undefined}
+            >
               <Input
                 value={part.hsn_code}
+                invalid={Boolean(errors.hsn_code)}
                 onChange={(event) => onChange({ hsn_code: event.target.value })}
                 className="tabular"
               />
             </Field>
           </FieldRow>
 
-          <Field label="Dimensions (in)" hint="The part itself, not a box.">
+          <Field
+            label="Dimensions (in)"
+            required
+            error={
+              errors.length_in || errors.width_in || errors.height_in
+                ? "All three are required."
+                : undefined
+            }
+            hint="The part itself, not a box."
+          >
             <div className="flex items-center gap-2">
               {(["length_in", "width_in", "height_in"] as const).map((key) => (
                 <Input
                   key={key}
                   type="number"
                   step="0.01"
+                  invalid={Boolean(errors[key])}
                   value={part[key] ?? ""}
                   onChange={(event) =>
                     onChange({ [key]: number(event.target.value) })
@@ -169,10 +189,16 @@ export function DisplayPartCard({
             </div>
           </Field>
 
-          <Field label="Part weight (kg)" hint="The bare part, no packaging.">
+          <Field
+            label="Part weight (kg)"
+            required
+            error={errors.product_weight_kg || undefined}
+            hint="The bare part, no packaging."
+          >
             <Input
               type="number"
               step="0.001"
+              invalid={Boolean(errors.product_weight_kg)}
               value={part.product_weight_kg ?? ""}
               onChange={(event) =>
                 onChange({ product_weight_kg: number(event.target.value) })
