@@ -1,0 +1,30 @@
+# Reaching the dev server from anywhere but this machine — a cloudflared or
+# ngrok tunnel, or just another device on the LAN.
+#
+# The browser only ever talks to the tunnel host: Next serves /api itself and
+# forwards it to the API container, so nothing is cross-origin and the API
+# needs no ALLOWED_HOSTS or CORS change of its own. Joining the API's compose
+# network is what makes `http://backend:8000` resolvable — which is a name it
+# already answers to.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+#   cloudflared tunnel --url http://localhost:3000
+#
+# The API must be up first; its network has to exist for this to start.
+
+services:
+  frontend:
+    environment:
+      NEXT_PUBLIC_API_URL: /api
+      API_PROXY_TARGET: http://backend:8000
+      # A quick tunnel's hostname is random every run, so allow the family.
+      # The private ranges are for opening it on a phone or another desk.
+      NEXT_DEV_ALLOWED_ORIGINS: "*.trycloudflare.com,*.ngrok-free.app,192.168.*.*,10.*.*.*"
+    networks:
+      - default
+      - api
+
+networks:
+  api:
+    external: true
+    name: dkc-packing-backend_default
