@@ -155,6 +155,34 @@ export function parseSheet({ name, rows }: WorkbookSheet): SheetRead {
 /** Names and style numbers are compared loosely; people type them by hand. */
 export const key = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
 
+/**
+ * The same name with every separator taken out. A buyer's sheet and a store
+ * record disagree about punctuation far more often than they disagree about
+ * which store is meant — "BATH, UK" against "BATH UK", "BOX-4" against "BOX 4".
+ */
+const loose = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * Indexes under both spellings so a lookup can fall back to the loose one.
+ * Used for the check *and* for filling the order, because a store matched one
+ * way and looked up the other would drop its lines on the floor.
+ */
+export function index<T>(items: T[], name: (item: T) => string): Map<string, T> {
+  const map = new Map<string, T>();
+  for (const item of items) {
+    for (const form of [key(name(item)), loose(name(item))]) {
+      if (form && !map.has(form)) map.set(form, item);
+    }
+  }
+  return map;
+}
+
+export const find = <T>(map: Map<string, T>, value: string): T | undefined =>
+  map.get(key(value)) ?? map.get(loose(value));
+
+/** Two names for the same thing, punctuation and casing aside. */
+export const sameName = (a: string, b: string) => loose(a) === loose(b);
+
 export interface MissingProduct {
   style_no: string;
   style_name: string;
@@ -193,10 +221,10 @@ export function matchSheet(
   products: Styled[],
   stores: Named[],
 ): SheetMatch {
-  const byStyle = new Map(products.map((item) => [key(item.style_no), item]));
-  const known = new Set(stores.map((item) => key(item.name)));
+  const byStyle = index(products, (item) => item.style_no);
+  const byStore = index(stores, (item) => item.name);
 
-  const missing_stores = chosenStores.filter((name) => !known.has(key(name)));
+  const missing_stores = chosenStores.filter((name) => !find(byStore, name));
 
   const missing_products: MissingProduct[] = [];
   let unordered = 0;
@@ -213,14 +241,14 @@ export function matchSheet(
       continue;
     }
 
-    const match = byStyle.get(key(line.style_no));
+    const match = find(byStyle, line.style_no);
     if (!match) {
       missing_products.push({
         style_no: line.style_no,
         style_name: line.style_name,
         known_as: null,
       });
-    } else if (key(match.style_name) !== key(line.style_name)) {
+    } else if (loose(match.style_name) !== loose(line.style_name)) {
       missing_products.push({
         style_no: line.style_no,
         style_name: line.style_name,

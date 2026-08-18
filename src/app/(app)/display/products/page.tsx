@@ -13,7 +13,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { ImportGapPanel, type GapItem } from "@/components/display/import-gap-panel";
 import { useImportGap } from "@/lib/import-gap";
-import { key } from "@/lib/order-sheet";
+import { find, index, sameName } from "@/lib/order-sheet";
 import { useCategories, useDisplayProducts } from "@/lib/queries";
 import { format } from "@/lib/calc";
 
@@ -41,20 +41,18 @@ export default function DisplayProductsPage() {
 
   const outstanding = useMemo<GapItem[]>(() => {
     if (!gap) return [];
-    const byStyle = new Map(
-      (everyProduct.data?.results ?? []).map((item) => [key(item.style_no), item]),
-    );
+    const byStyle = index(everyProduct.data?.results ?? [], (item) => item.style_no);
 
     const items: GapItem[] = [];
     for (const want of gap.products) {
-      const found = byStyle.get(key(want.style_no));
+      const found = find(byStyle, want.style_no);
       if (!found) {
         items.push({ id: want.style_no, label: want.style_no, hint: want.style_name });
         continue;
       }
       // The number is taken but the name does not agree. It cannot be created
       // twice, so it stays on the list saying why rather than quietly passing.
-      if (key(found.style_name) !== key(want.style_name)) {
+      if (!sameName(found.style_name, want.style_name)) {
         items.push({
           id: want.style_no,
           label: want.style_no,

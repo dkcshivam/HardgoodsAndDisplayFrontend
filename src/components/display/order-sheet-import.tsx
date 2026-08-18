@@ -25,7 +25,8 @@ import { Field } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { saveGap } from "@/lib/import-gap";
 import {
-  key,
+  find,
+  index,
   matchSheet,
   parseSheet,
   readWorkbook,
@@ -132,23 +133,25 @@ export function OrderSheetImport({
   function apply() {
     if (!read || !match) return;
 
-    const storeAt = new Map(stores.map((item) => [key(item.name), item.id]));
-    const productAt = new Map(products.map((item) => [key(item.style_no), item.id]));
+    const byStore = index(stores, (item) => item.name);
+    const byStyle = index(products, (item) => item.style_no);
 
     const storeIds: number[] = [];
     for (const name of chosen) {
-      const id = storeAt.get(key(name));
-      if (id !== undefined && !storeIds.includes(id)) storeIds.push(id);
+      const store = find(byStore, name);
+      if (store && !storeIds.includes(store.id)) storeIds.push(store.id);
     }
 
     const lines: FilledLine[] = [];
     for (const line of read.lines) {
-      const product = productAt.get(key(line.style_no));
-      if (product === undefined) continue;
+      const product = find(byStyle, line.style_no);
+      if (!product) continue;
       for (const name of chosen) {
         const quantity = line.quantities[name] ?? 0;
-        const store = storeAt.get(key(name));
-        if (quantity > 0 && store !== undefined) lines.push({ store, product, quantity });
+        const store = find(byStore, name);
+        if (quantity > 0 && store) {
+          lines.push({ store: store.id, product: product.id, quantity });
+        }
       }
     }
 

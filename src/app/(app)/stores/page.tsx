@@ -21,7 +21,7 @@ import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { ImportGapPanel, type GapItem } from "@/components/display/import-gap-panel";
 import { useImportGap } from "@/lib/import-gap";
-import { key } from "@/lib/order-sheet";
+import { find, index } from "@/lib/order-sheet";
 import { useRemove, useSave, useStores } from "@/lib/queries";
 import { ApiError } from "@/lib/api";
 import type { Store } from "@/types";
@@ -58,11 +58,9 @@ export default function StoresPage() {
 
   const outstanding = useMemo<GapItem[]>(() => {
     if (!gap) return [];
-    const known = new Set(
-      (everyStore.data?.results ?? []).map((store) => key(store.name)),
-    );
+    const known = index(everyStore.data?.results ?? [], (store) => store.name);
     return gap.stores
-      .filter((name) => !known.has(key(name)))
+      .filter((name) => !find(known, name))
       .map((name) => ({ id: name, label: name }));
   }, [gap, everyStore.data]);
 
