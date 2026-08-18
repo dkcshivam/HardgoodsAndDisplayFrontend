@@ -248,7 +248,9 @@ export function matchSheet(
         style_name: line.style_name,
         known_as: null,
       });
-    } else if (loose(match.style_name) !== loose(line.style_name)) {
+    } else if (match.style_name.trim() && !sameName(match.style_name, line.style_name)) {
+      // A product on file under no name at all disagrees with nothing, so it
+      // is matched on its style number and left alone.
       missing_products.push({
         style_no: line.style_no,
         style_name: line.style_name,
