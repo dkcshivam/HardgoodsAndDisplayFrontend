@@ -157,7 +157,9 @@ export default function StoresPage() {
         </Card>
         </div>
 
-        {gap && (
+        {/* Held back until the list is in: an empty one would show things
+            that are already added as still outstanding. */}
+        {gap && everyStore.data && (
           <ImportGapPanel
             title="Stores to add"
             sheet={gap.sheet}

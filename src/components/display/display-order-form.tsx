@@ -314,6 +314,8 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
             orderName={name}
             products={catalogue}
             stores={storeList}
+            loading={products.isLoading || stores.isLoading}
+            failed={products.isError || stores.isError}
             onFill={fillFromSheet}
           />
         )}

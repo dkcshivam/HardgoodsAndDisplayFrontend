@@ -57,11 +57,16 @@ export function OrderSheetImport({
   orderName,
   products,
   stores,
+  loading,
+  failed,
   onFill,
 }: {
   orderName: string;
   products: DisplayProduct[];
   stores: Store[];
+  /** Whether the catalogue this is checked against has actually arrived. */
+  loading: boolean;
+  failed: boolean;
   onFill: (storeIds: number[], lines: FilledLine[]) => void;
 }) {
   const router = useRouter();
@@ -80,9 +85,13 @@ export function OrderSheetImport({
     [read, dropped],
   );
 
+  // An empty catalogue would make every style and store on the sheet look
+  // missing, which is a far more alarming lie than saying nothing yet.
+  const known = !loading && !failed;
+
   const match = useMemo(
-    () => (read ? matchSheet(read, chosen, products, stores) : null),
-    [read, chosen, products, stores],
+    () => (read && known ? matchSheet(read, chosen, products, stores) : null),
+    [read, known, chosen, products, stores],
   );
 
   /** The file is opened once and every tab kept, so switching is instant. */
@@ -131,7 +140,7 @@ export function OrderSheetImport({
 
   /** Hands the sheet to the form, which is where it is reviewed and saved. */
   function apply() {
-    if (!read || !match) return;
+    if (!read || !match || !known) return;
 
     const byStore = index(stores, (item) => item.name);
     const byStyle = index(products, (item) => item.style_no);
@@ -267,6 +276,15 @@ export function OrderSheetImport({
           <p className="flex items-start gap-2 text-sm text-destructive">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             {error}
+          </p>
+        )}
+
+        {read && !known && (
+          <p className="flex items-start gap-2 text-sm text-muted-foreground">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+            {failed
+              ? "Your stores and products could not be loaded, so this sheet cannot be checked against them. Reload the page and try again."
+              : "Loading your stores and products…"}
           </p>
         )}
 

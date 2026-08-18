@@ -197,7 +197,9 @@ export default function DisplayProductsPage() {
         </Card>
         </div>
 
-        {gap && (
+        {/* Held back until the list is in: an empty one would show things
+            that are already added as still outstanding. */}
+        {gap && everyProduct.data && (
           <ImportGapPanel
             title="Products to add"
             sheet={gap.sheet}
