@@ -51,6 +51,7 @@ import type { Product, ProductImage, ProductStatus } from "@/types";
 export interface ProductDraft extends PackSpecDraft {
   id?: number;
   style_no: string;
+  style_name: string;
   description: string;
   category: number | null;
   customs_description: string;
@@ -71,6 +72,7 @@ export interface ProductDraft extends PackSpecDraft {
 
 export const BLANK_PRODUCT: ProductDraft = {
   style_no: "",
+  style_name: "",
   description: "",
   category: null,
   customs_description: "",
@@ -93,6 +95,7 @@ export function toDraft(product: Product): ProductDraft {
   return {
     id: product.id,
     style_no: product.style_no,
+    style_name: product.style_name,
     description: product.description,
     category: product.category,
     customs_description: product.customs_description,
@@ -442,6 +445,13 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
                 invalid={Boolean(errors.style_no)}
                 onChange={(event) => set({ style_no: event.target.value })}
                 className="tabular"
+              />
+            </Field>
+
+            <Field label="Style name">
+              <Input
+                value={form.style_name}
+                onChange={(event) => set({ style_name: event.target.value })}
               />
             </Field>
 

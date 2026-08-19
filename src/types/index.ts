@@ -88,6 +88,7 @@ export interface ProductPart extends PackSpec {
 export interface ProductListItem {
   id: number;
   style_no: string;
+  style_name: string;
   description: string;
   category: number | null;
   category_name: string;
@@ -106,6 +107,8 @@ export interface ProductListItem {
 export interface Product extends Partial<PackSpec> {
   id: number;
   style_no: string;
+  /** The buyer's name for it — what a box sticker prints. */
+  style_name: string;
   description: string;
   category: number | null;
   category_name: string;

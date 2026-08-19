@@ -38,6 +38,7 @@ export default function ProductsPage() {
 
   const { sort, toggle, sorted } = useSort(rows, {
     style_no: (row) => row.style_no,
+    style_name: (row) => row.style_name,
     description: (row) => row.description,
     category: (row) => row.category_name,
     // Single-box first, then by how many pieces it breaks into.
@@ -62,7 +63,7 @@ export default function ProductsPage() {
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Search style no, description, HSN…"
+            placeholder="Search style no, name, description, HSN…"
           />
           <Select
             className="w-40"
@@ -95,6 +96,9 @@ export default function ProductsPage() {
                 <SortTH column="style_no" sort={sort} onSort={toggle}>
                   Style No
                 </SortTH>
+                <SortTH column="style_name" sort={sort} onSort={toggle}>
+                  Style Name
+                </SortTH>
                 <SortTH column="description" sort={sort} onSort={toggle}>
                   Description
                 </SortTH>
@@ -107,14 +111,14 @@ export default function ProductsPage() {
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={5}>
+                <EmptyRow colSpan={6}>
                   <span className="text-destructive">Could not load products.</span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={5}>
+                <EmptyRow colSpan={6}>
                   Nothing matches. Try clearing the filters.
                 </EmptyRow>
               )}
@@ -142,6 +146,7 @@ export default function ProductsPage() {
                       {row.style_no}
                     </Link>
                   </TD>
+                  <TD>{row.style_name || "—"}</TD>
                   <TD>{row.description}</TD>
                   <TD className="text-secondary-foreground">
                     {row.category_name || "—"}

@@ -50,12 +50,14 @@ export default function NewOrderPage() {
   const save = useSave<Record<string, unknown>>("orders");
 
   const catalogue = products.data?.results ?? [];
-  // Style number first: it is what people say out loud. The description is
-  // searched with it, so half a name finds the row too.
+  // Style number first: it is what people say out loud. The name sits under
+  // it, and the description is searched with them, so half a name finds the
+  // row too.
   const productOptions: ComboboxOption[] = catalogue.map((item) => ({
     value: item.id,
     label: item.style_no,
-    hint: item.description,
+    hint: item.style_name || item.description,
+    keywords: item.description,
     image: item.main_image,
   }));
   const setLine = (index: number, patch: Partial<LineDraft>) =>
