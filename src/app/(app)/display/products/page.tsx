@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { ImageOff, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import {
   Table,
   THead,
+  TH,
   SortTH,
   TR,
   TD,
@@ -23,6 +24,7 @@ import { useImportGap } from "@/lib/import-gap";
 import { find, index, sameName } from "@/lib/order-sheet";
 import { useCategories, useDisplayProducts } from "@/lib/queries";
 import { format } from "@/lib/calc";
+import { mainImage } from "@/lib/images";
 import { useSort } from "@/lib/sort";
 
 export default function DisplayProductsPage() {
@@ -98,7 +100,6 @@ export default function DisplayProductsPage() {
         <div className="space-y-5">
         <PageHeader
           title="Display products"
-          description="Store decor and small goods. Each one ships inside a pack template's box, never its own."
           actions={
             <Button size="sm" asChild>
               <Link href="/display/products/new">
@@ -141,6 +142,7 @@ export default function DisplayProductsPage() {
           <Table>
             <THead>
               <tr>
+                <TH className="w-14" />
                 <SortTH column="style_no" sort={sort} onSort={toggle}>
                   Style No
                 </SortTH>
@@ -168,22 +170,38 @@ export default function DisplayProductsPage() {
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={8}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={9}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={8}>
+                <EmptyRow colSpan={9}>
                   <span className="text-destructive">
                     Could not load display products.
                   </span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={8}>
+                <EmptyRow colSpan={9}>
                   No display products yet. Create one to start building
                   templates.
                 </EmptyRow>
               )}
-              {sorted.map((product) => (
+              {sorted.map((product) => {
+                const photo = mainImage(product.images);
+                return (
                 <TR key={product.id}>
+                  <TD className="pr-0">
+                    {photo ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={photo}
+                        alt=""
+                        className="size-9 rounded-md border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-9 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground/50">
+                        <ImageOff className="size-3.5" />
+                      </div>
+                    )}
+                  </TD>
                   <TD>
                     <Link
                       href={`/display/products/${product.id}`}
@@ -229,7 +247,8 @@ export default function DisplayProductsPage() {
                     </Badge>
                   </TD>
                 </TR>
-              ))}
+                );
+              })}
             </tbody>
           </Table>
         </Card>
