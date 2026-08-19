@@ -534,3 +534,64 @@ export interface DisplayPackingPlan {
   /** Only present on the response to a replicate. */
   replicated_to?: StoreRef[];
 }
+
+/* ── Printable documents ──────────────────────────────────────────────
+ *
+ * Built server-side by the same code that writes the .xlsx, so the print
+ * page and the spreadsheet cannot quote different figures. `places` is the
+ * Excel number format's decimal count; null means the column is text.
+ */
+
+export interface DocColumn {
+  label: string;
+  places: number | null;
+}
+
+export type DocValue = string | number | null;
+
+export interface DocRow {
+  /** First row of a box — takes the heavier rule above it. */
+  opens: boolean;
+  values: DocValue[];
+}
+
+export interface DocBlock {
+  /** Display blocks by store; Hardgoods has one unbannered block. */
+  banner: string;
+  rows: DocRow[];
+  subtotal_label: string;
+  subtotal: DocValue[] | null;
+}
+
+export interface PackingListDocument {
+  title: string;
+  facts: { label: string; value: string }[];
+  columns: DocColumn[];
+  blocks: DocBlock[];
+  total_label: string;
+  total: DocValue[] | null;
+}
+
+export interface InvoiceDocument {
+  title: string;
+  exporter: string[];
+  consignee: string[];
+  ship_to: string[];
+  origin: string;
+  /** Ruled and labelled but left empty — the desk fills these. */
+  shipment_fields: string[][];
+  columns: DocColumn[];
+  lines: DocValue[][];
+  total: {
+    quantity: number;
+    net_weight_kg: number;
+    amount_usd: number | null;
+  };
+  is_priced: boolean;
+  amount_in_words: string;
+  origin_line: string;
+  note: string;
+  declaration: string[];
+  signatory: string;
+  for_exporter: string;
+}

@@ -12,6 +12,7 @@ import {
   IndianRupee,
   Package,
   Pencil,
+  Printer,
   Receipt,
   Tags,
   Trash2,
@@ -210,6 +211,21 @@ export default function DisplayPackingPage({
               </Gated>
               <Gated reason={gate}>
                 {gate ? (
+                  <Button variant="secondary" size="icon" className="size-8" disabled>
+                    <Printer />
+                  </Button>
+                ) : (
+                  <Tooltip label="Print or save as PDF — A4, black and white">
+                    <Button variant="secondary" size="icon" className="size-8" asChild>
+                      <Link href={`/display/orders/${orderId}/packing-list`} aria-label="Print packing list">
+                        <Printer />
+                      </Link>
+                    </Button>
+                  </Tooltip>
+                )}
+              </Gated>
+              <Gated reason={gate}>
+                {gate ? (
                   <Button variant="secondary" size="sm" disabled>
                     <Tags /> Box stickers
                   </Button>
@@ -245,6 +261,21 @@ export default function DisplayPackingPage({
                   <Receipt />
                   {downloadInvoice.isPending ? "Building…" : "Invoice"}
                 </Button>
+              </Gated>
+              <Gated reason={invoiceGate}>
+                {invoiceGate ? (
+                  <Button variant="secondary" size="icon" className="size-8" disabled>
+                    <Printer />
+                  </Button>
+                ) : (
+                  <Tooltip label="Print or save as PDF — A4, black and white">
+                    <Button variant="secondary" size="icon" className="size-8" asChild>
+                      <Link href={`/display/orders/${orderId}/invoice`} aria-label="Print invoice">
+                        <Printer />
+                      </Link>
+                    </Button>
+                  </Tooltip>
+                )}
               </Gated>
               {order.data.status === "packing" && (
                 <Button

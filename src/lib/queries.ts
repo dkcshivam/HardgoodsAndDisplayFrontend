@@ -17,6 +17,8 @@ import type {
   Order,
   PackingPlan,
   PackTemplate,
+  InvoiceDocument,
+  PackingListDocument,
   Product,
   ProductImage,
   ProductListItem,
@@ -356,3 +358,24 @@ export function useOrderAction(orderId: number) {
     }),
   };
 }
+
+/** Which module a printable document belongs to. */
+export type DocResource = "orders" | "display-orders";
+
+export const usePackingListDocument = (
+  resource: DocResource,
+  orderId: number,
+) =>
+  useQuery<PackingListDocument>({
+    queryKey: [resource, orderId, "packing-list-data"],
+    queryFn: () =>
+      api.get<PackingListDocument>(
+        `/${resource}/${orderId}/packing-list-data/`,
+      ),
+  });
+
+export const useInvoiceDocument = (resource: DocResource, orderId: number) =>
+  useQuery<InvoiceDocument>({
+    queryKey: [resource, orderId, "invoice-data"],
+    queryFn: () => api.get<InvoiceDocument>(`/${resource}/${orderId}/invoice-data/`),
+  });
