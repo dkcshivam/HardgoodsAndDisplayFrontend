@@ -8,7 +8,6 @@ import {
   Building2,
   ChevronDown,
   ClipboardList,
-  LayoutDashboard,
   Package,
   Store,
   Tags,
@@ -66,12 +65,6 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        <NavLink
-          href="/"
-          label="Dashboard"
-          icon={LayoutDashboard}
-          active={pathname === "/"}
-        />
         {GROUPS.map((group) => (
           <NavGroup key={group.title} title={group.title} pathname={pathname}>
             {group.items.map((item) => (

@@ -32,15 +32,11 @@ export function Topbar() {
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card px-5">
       <nav className="flex items-center gap-1 text-sm">
-        <Link
-          href="/"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          Dashboard
-        </Link>
-        {crumbs.map((crumb) => (
+        {crumbs.map((crumb, index) => (
           <span key={crumb.href} className="flex items-center gap-1">
-            <ChevronRight className="size-3.5 text-muted-foreground/50" />
+            {index > 0 && (
+              <ChevronRight className="size-3.5 text-muted-foreground/50" />
+            )}
             {crumb.last ? (
               <span className="font-medium capitalize">{crumb.label}</span>
             ) : (
