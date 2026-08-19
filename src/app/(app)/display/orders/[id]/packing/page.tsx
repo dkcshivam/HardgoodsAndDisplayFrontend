@@ -8,7 +8,6 @@ import {
   Check,
   Copy,
   Download,
-  Info,
   IndianRupee,
   Package,
   Pencil,
@@ -26,6 +25,7 @@ import { useToast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ReconciliationBar } from "@/components/packing/reconciliation-bar";
 import { TemplateDialog } from "@/components/display/template-dialog";
+import { Gated } from "@/components/packing/gated";
 import { RatesDialog } from "@/components/packing/rates-dialog";
 import type { RateRow } from "@/components/packing/rates-dialog";
 import {
@@ -115,6 +115,24 @@ export default function DisplayPackingPage({
   const done = store !== null && data.remaining.length === 0;
   const allDone = data.stores.every((row) => row.is_done);
 
+  // The sheet, the stickers and the invoice all describe finished boxes, so
+  // they stay shut until the last store is empty.
+  const shortStores = data.stores.filter((row) => !row.is_done).length;
+  const gate =
+    data.carton_count === 0
+      ? "Nothing is packed yet."
+      : shortStores > 0
+        ? `${shortStores} store${shortStores === 1 ? " is" : "s are"} still short.`
+        : "";
+
+  const rateRows = styleRows(order.data, priced);
+  const unpriced = rateRows.filter((row) => !row.rate.trim()).length;
+  const invoiceGate =
+    gate ||
+    (unpriced > 0
+      ? `${unpriced} style${unpriced === 1 ? " has" : "s have"} no rate yet.`
+      : "");
+
   // Stays true through the refetch, not just the request. Re-enabling the
   // moment the POST returns leaves the old capacities on screen with live
   // buttons, and a second click lands on whatever has re-sorted into place.
@@ -174,11 +192,11 @@ export default function DisplayPackingPage({
                   </Link>
                 </Button>
               )}
-              {data.carton_count > 0 && (
+              <Gated reason={gate}>
                 <Button
                   variant="secondary"
                   size="sm"
-                  disabled={downloadPackingList.isPending}
+                  disabled={!!gate || downloadPackingList.isPending}
                   onClick={() =>
                     downloadPackingList.mutate(order.data!.number, {
                       onError: () => toast.error("Could not build the sheet"),
@@ -188,28 +206,35 @@ export default function DisplayPackingPage({
                   <Download />
                   {downloadPackingList.isPending ? "Building…" : "Download packing list"}
                 </Button>
-              )}
-              {data.carton_count > 0 && (
-                <Button variant="secondary" size="sm" asChild>
-                  <Link href={`/display/orders/${orderId}/stickers`}>
+              </Gated>
+              <Gated reason={gate}>
+                {gate ? (
+                  <Button variant="secondary" size="sm" disabled>
                     <Tags /> Box stickers
-                  </Link>
-                </Button>
-              )}
-              {data.carton_count > 0 && (
+                  </Button>
+                ) : (
+                  <Button variant="secondary" size="sm" asChild>
+                    <Link href={`/display/orders/${orderId}/stickers`}>
+                      <Tags /> Box stickers
+                    </Link>
+                  </Button>
+                )}
+              </Gated>
+              <Gated reason={gate}>
                 <Button
                   variant="secondary"
                   size="sm"
+                  disabled={!!gate}
                   onClick={() => setPricing(true)}
                 >
                   <IndianRupee /> Rates
                 </Button>
-              )}
-              {data.carton_count > 0 && (
+              </Gated>
+              <Gated reason={invoiceGate}>
                 <Button
                   variant="secondary"
                   size="sm"
-                  disabled={downloadInvoice.isPending}
+                  disabled={!!invoiceGate || downloadInvoice.isPending}
                   onClick={() =>
                     downloadInvoice.mutate(order.data!.number, {
                       onError: () => toast.error("Could not build the invoice"),
@@ -219,7 +244,7 @@ export default function DisplayPackingPage({
                   <Receipt />
                   {downloadInvoice.isPending ? "Building…" : "Invoice"}
                 </Button>
-              )}
+              </Gated>
               {order.data.status === "packing" && (
                 <Button
                   size="sm"
@@ -589,32 +614,6 @@ export default function DisplayPackingPage({
             </>
           )}
 
-          {data.warnings.length > 0 && (
-            <Card className="border-warning/30 bg-warning-subtle">
-              <CardBody>
-                <div className="flex items-center gap-2 text-sm font-semibold text-warning">
-                  <Info className="size-4" />
-                  {data.warnings.length}{" "}
-                  {data.warnings.length === 1 ? "warning" : "warnings"}
-                </div>
-                <ul className="mt-2 space-y-1 text-xs text-warning">
-                  {data.warnings.slice(0, 8).map((warning, index) => (
-                    <li key={index}>• {warning.message}</li>
-                  ))}
-                  {data.warnings.length > 8 && (
-                    <li className="opacity-70">
-                      …and {data.warnings.length - 8} more
-                    </li>
-                  )}
-                </ul>
-                <p className="mt-2 text-xs text-warning/80">
-                  Advisory only — a design records a box somebody actually
-                  packed, so these never stop a save.
-                </p>
-              </CardBody>
-            </Card>
-          )}
-
           {data.blockers.length > 0 && (
             <Card className="border-primary/30 bg-primary-subtle">
               <CardBody>
@@ -707,7 +706,7 @@ export default function DisplayPackingPage({
         open={pricing}
         onClose={() => setPricing(false)}
         saving={saveRates.isPending}
-        rows={styleRows(order.data, priced)}
+        rows={rateRows}
         onSave={(rates) =>
           saveRates.mutate(
             Object.entries(rates)

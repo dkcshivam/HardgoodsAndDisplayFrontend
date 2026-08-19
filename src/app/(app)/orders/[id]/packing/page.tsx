@@ -22,6 +22,7 @@ import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { ReconciliationBar } from "@/components/packing/reconciliation-bar";
+import { Gated } from "@/components/packing/gated";
 import { RatesDialog } from "@/components/packing/rates-dialog";
 import type { RateRow } from "@/components/packing/rates-dialog";
 import { useOrder, useOrderAction, usePackingPlan } from "@/lib/queries";
@@ -178,6 +179,35 @@ export default function PackingPage({
 
   const canSave = blockers.length === 0 && cartons.length > 0;
 
+  // The sheet, the stickers and the invoice all describe finished cartons, so
+  // they stay shut until every ordered unit is inside one — and, since they
+  // are built server-side, until the plan on screen is the plan on file.
+  const short = reconciliation.filter((row) => !row.is_matched).length;
+  const gate =
+    cartons.length === 0
+      ? "Nothing is packed yet."
+      : short > 0
+        ? `${short} style${short === 1 ? " is" : "s are"} still short.`
+        : "";
+  const docGate =
+    gate ||
+    (dirty ? "Save the plan first — these are built from what is stored." : "");
+
+  const rateRows = (order.data.lines ?? []).map(
+    (line): RateRow => ({
+      product: line.product,
+      style_no: line.product_style_no,
+      name: line.product_description,
+      rate: line.rate_usd === null ? "" : String(line.rate_usd),
+    }),
+  );
+  const unpriced = rateRows.filter((row) => !row.rate.trim()).length;
+  const invoiceGate =
+    docGate ||
+    (unpriced > 0
+      ? `${unpriced} style${unpriced === 1 ? " has" : "s have"} no rate yet.`
+      : "");
+
   return (
     <>
       <main className="flex-1 overflow-y-auto p-6">
@@ -206,57 +236,54 @@ export default function PackingPage({
                 <Wand2 />{" "}
                 {autoPack.isPending ? "Generating…" : "Generate packing list"}
               </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={
-                  cartons.length === 0 || dirty || downloadPackingList.isPending
-                }
-                title={
-                  dirty
-                    ? "Save the plan first — the sheet is built from what is stored."
-                    : "Download the packing list as an Excel sheet"
-                }
-                onClick={() =>
-                  downloadPackingList.mutate(order.data.number, {
-                    onError: (error) =>
-                      toast.error(
-                        error instanceof ApiError
-                          ? error.detail
-                          : "Could not build the packing list",
-                      ),
-                  })
-                }
-              >
-                <FileSpreadsheet />{" "}
-                {downloadPackingList.isPending ? "Preparing…" : "Download packing list"}
-              </Button>
-              {cartons.length > 0 && (
-                <Button variant="secondary" size="sm" asChild>
-                  <Link href={`/orders/${orderId}/stickers`}>
-                    <Tags /> Box stickers
-                  </Link>
-                </Button>
-              )}
-              {cartons.length > 0 && (
+              <Gated reason={docGate}>
                 <Button
                   variant="secondary"
                   size="sm"
+                  disabled={!!docGate || downloadPackingList.isPending}
+                  onClick={() =>
+                    downloadPackingList.mutate(order.data.number, {
+                      onError: (error) =>
+                        toast.error(
+                          error instanceof ApiError
+                            ? error.detail
+                            : "Could not build the packing list",
+                        ),
+                    })
+                  }
+                >
+                  <FileSpreadsheet />{" "}
+                  {downloadPackingList.isPending ? "Preparing…" : "Download packing list"}
+                </Button>
+              </Gated>
+              <Gated reason={docGate}>
+                {docGate ? (
+                  <Button variant="secondary" size="sm" disabled>
+                    <Tags /> Box stickers
+                  </Button>
+                ) : (
+                  <Button variant="secondary" size="sm" asChild>
+                    <Link href={`/orders/${orderId}/stickers`}>
+                      <Tags /> Box stickers
+                    </Link>
+                  </Button>
+                )}
+              </Gated>
+              <Gated reason={gate}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={!!gate}
                   onClick={() => setPricing(true)}
                 >
                   <IndianRupee /> Rates
                 </Button>
-              )}
-              {cartons.length > 0 && (
+              </Gated>
+              <Gated reason={invoiceGate}>
                 <Button
                   variant="secondary"
                   size="sm"
-                  disabled={dirty || downloadInvoice.isPending}
-                  title={
-                    dirty
-                      ? "Save the plan first — the invoice is built from what is stored."
-                      : "Download the commercial invoice as an Excel sheet"
-                  }
+                  disabled={!!invoiceGate || downloadInvoice.isPending}
                   onClick={() =>
                     downloadInvoice.mutate(order.data.number, {
                       onError: (error) =>
@@ -271,7 +298,7 @@ export default function PackingPage({
                   <Receipt />
                   {downloadInvoice.isPending ? "Preparing…" : "Invoice"}
                 </Button>
-              )}
+              </Gated>
               {order.data.status === "packing" && (
                 <Button
                   size="sm"
@@ -526,14 +553,7 @@ export default function PackingPage({
         open={pricing}
         onClose={() => setPricing(false)}
         saving={saveRates.isPending}
-        rows={(order.data.lines ?? []).map(
-          (line): RateRow => ({
-            product: line.product,
-            style_no: line.product_style_no,
-            name: line.product_description,
-            rate: line.rate_usd === null ? "" : String(line.rate_usd),
-          }),
-        )}
+        rows={rateRows}
         onSave={(rates) =>
           saveRates.mutate(
             (order.data.lines ?? []).map((line) => ({
