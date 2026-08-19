@@ -1130,7 +1130,7 @@ function styleRows(
     seen.set(line.product, {
       product: line.product,
       style_no: line.product_style_no,
-      name: line.product_description,
+      style_name: line.product_style_name || line.product_description,
       rate: priced.get(line.product) ?? "",
     });
   }

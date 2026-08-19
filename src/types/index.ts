@@ -159,6 +159,7 @@ export interface OrderLine {
   id: number;
   product: number;
   product_style_no: string;
+  product_style_name: string;
   product_description: string;
   /** Set per order: the same SKU ships in whatever finish was asked for. */
   color: string;
@@ -363,6 +364,7 @@ export interface DisplayOrderLine {
   store_name: string;
   product: number;
   product_style_no: string;
+  product_style_name: string;
   product_description: string;
   color: string;
   quantity: number;

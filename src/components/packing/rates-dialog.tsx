@@ -15,7 +15,8 @@ import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 export interface RateRow {
   product: number;
   style_no: string;
-  name: string;
+  /** The style's own name — the description only when it has none. */
+  style_name: string;
   rate: string;
 }
 
@@ -81,7 +82,7 @@ function Sheet({
             <THead>
               <tr>
                 <TH>Style No</TH>
-                <TH>Name</TH>
+                <TH>Style name</TH>
                 <TH className="w-32 text-right">Rate US$</TH>
               </tr>
             </THead>
@@ -92,7 +93,9 @@ function Sheet({
               {rows.map((row) => (
                 <TR key={row.product}>
                   <TD className="tabular font-medium">{row.style_no}</TD>
-                  <TD className="text-secondary-foreground">{row.name || "—"}</TD>
+                  <TD className="text-secondary-foreground">
+                    {row.style_name || "—"}
+                  </TD>
                   <TD>
                     <Input
                       className="tabular text-right"
