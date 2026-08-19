@@ -71,7 +71,6 @@ export default function MerchantsPage() {
           <Table>
             <THead>
               <tr>
-                <TH>Code</TH>
                 <TH>Name</TH>
                 <TH>Contact</TH>
                 <TH>Location</TH>
@@ -80,14 +79,13 @@ export default function MerchantsPage() {
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={6}>No merchants yet.</EmptyRow>
+                <EmptyRow colSpan={5}>No merchants yet.</EmptyRow>
               )}
               {rows.map((row) => (
                 <TR key={row.id}>
-                  <TD className="tabular font-medium">{row.code}</TD>
-                  <TD>{row.name}</TD>
+                  <TD className="font-medium">{row.name}</TD>
                   <TD className="text-secondary-foreground">
                     {row.contact_name || "—"}
                     {row.email && (
