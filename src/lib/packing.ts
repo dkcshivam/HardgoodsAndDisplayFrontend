@@ -143,8 +143,8 @@ export function cartonNetWeight(carton: CartonDraft): number {
 
 export function nextCartonNo(cartons: CartonDraft[]): string {
   const highest = cartons.reduce((max, carton) => {
-    const match = /^CTN-(\d+)$/.exec((carton.carton_no ?? "").trim());
+    const match = /^BOX-(\d+)$/.exec((carton.carton_no ?? "").trim());
     return match ? Math.max(max, Number(match[1])) : max;
   }, 0);
-  return `CTN-${String(highest + 1).padStart(3, "0")}`;
+  return `BOX-${String(highest + 1).padStart(3, "0")}`;
 }
