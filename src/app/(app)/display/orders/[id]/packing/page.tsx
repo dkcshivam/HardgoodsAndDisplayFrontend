@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Check,
+  ChevronDown,
   Copy,
   Download,
   IndianRupee,
@@ -797,6 +798,12 @@ export default function DisplayPackingPage({
  * plan is the point: at fifty stores the first question is which ones are not
  * finished.
  */
+/**
+ * The screen exists to answer one question — which store is not finished — so
+ * the unfinished ones sit at the top and the packed ones collapse behind a
+ * single line. At 17 stores that is two rows instead of six; at 150 it is the
+ * difference between a picker and a page.
+ */
 function StorePicker({
   stores,
   active,
@@ -806,7 +813,20 @@ function StorePicker({
   active: number | null;
   onPick: (store: number | null) => void;
 }) {
-  const left = stores.filter((row) => !row.is_done).length;
+  const [showPacked, setShowPacked] = useState(false);
+
+  const left = stores.filter((row) => !row.is_done);
+  const packed = stores.filter((row) => row.is_done);
+  // The fold opens itself when it would otherwise hide something: the store
+  // being packed, or — with nothing left — every store on the order. Switching
+  // store remounts this, so the rule has to be derived, not remembered.
+  const open =
+    showPacked ||
+    left.length === 0 ||
+    packed.some((row) => row.store === active);
+
+  const pieces = packed.reduce((sum, row) => sum + row.packed, 0);
+  const boxes = packed.reduce((sum, row) => sum + row.carton_count, 0);
 
   return (
     <Card>
@@ -814,12 +834,13 @@ function StorePicker({
         <div>
           <CardTitle>Stores on this order</CardTitle>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {left === 0
+            {left.length === 0
               ? `All ${stores.length} packed.`
-              : `${left} of ${stores.length} still need packing.`}
+              : `${left.length} of ${stores.length} still need packing.`}
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground/70">
-            Pieces — a multi-part product counts each part on its own.
+            Hover a store for its piece count — a multi-part product counts each
+            part on its own.
           </p>
         </div>
         {active !== null && (
@@ -828,41 +849,91 @@ function StorePicker({
           </Button>
         )}
       </CardHeader>
-      <CardBody className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {stores.map((row) => (
-          <button
-            key={row.store}
-            onClick={() => onPick(row.store)}
-            className={cn(
-              "rounded-md border px-3 py-2 text-left text-xs transition-colors",
-              active === row.store
-                ? "border-primary/50 bg-primary-subtle"
-                : row.is_done
-                  ? "border-success/25 bg-success-subtle hover:border-success/40"
-                  : "border-border bg-card hover:bg-secondary/50",
+      <CardBody className="space-y-2">
+        {left.length > 0 && (
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Needs packing · {left.length}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {left.map((row) => (
+                <StoreChip
+                  key={row.store}
+                  row={row}
+                  active={active === row.store}
+                  onPick={onPick}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {packed.length > 0 && (
+          <div className="space-y-1.5">
+            <button
+              onClick={() => setShowPacked((value) => !value)}
+              className="flex w-full items-center gap-2 rounded-md border border-border bg-secondary/40 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-secondary"
+            >
+              <ChevronDown
+                className={cn("size-3.5 transition-transform", !open && "-rotate-90")}
+              />
+              <span className="font-semibold text-foreground">
+                Packed · {packed.length}
+              </span>
+              <span className="tabular">
+                — {format.integer(pieces)} pieces in {format.integer(boxes)} box
+                {boxes === 1 ? "" : "es"}
+              </span>
+            </button>
+            {open && (
+              <div className="flex flex-wrap gap-1">
+                {packed.map((row) => (
+                  <StoreChip
+                    key={row.store}
+                    row={row}
+                    active={active === row.store}
+                    onPick={onPick}
+                  />
+                ))}
+              </div>
             )}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-medium">{row.store_name}</span>
-              {row.is_done ? (
-                <span className="inline-flex items-center gap-1 text-success">
-                  <Check className="size-3.5" /> packed
-                </span>
-              ) : (
-                <span className="tabular text-warning">
-                  {format.integer(row.remaining)} left
-                </span>
-              )}
-            </div>
-            <div className="tabular mt-0.5 text-muted-foreground">
-              {format.integer(row.packed)}/{format.integer(row.ordered)} pieces ·{" "}
-              {format.integer(row.carton_count)} carton
-              {row.carton_count === 1 ? "" : "s"}
-            </div>
-          </button>
-        ))}
+          </div>
+        )}
       </CardBody>
     </Card>
+  );
+}
+
+function StoreChip({
+  row,
+  active,
+  onPick,
+}: {
+  row: StoreProgress;
+  active: boolean;
+  onPick: (store: number) => void;
+}) {
+  return (
+    <button
+      onClick={() => onPick(row.store)}
+      // Native, so 150 chips do not mean 150 tooltip providers.
+      title={`${format.integer(row.packed)} of ${format.integer(row.ordered)} pieces · ${format.integer(row.carton_count)} box${row.carton_count === 1 ? "" : "es"}`}
+      className={cn(
+        "tabular rounded border px-1.5 py-0.5 text-xs transition-colors",
+        active
+          ? "border-primary bg-primary font-semibold text-primary-foreground"
+          : row.is_done
+            ? "border-success/35 bg-success-subtle text-success hover:border-success/60"
+            : "border-warning/45 bg-warning-subtle font-semibold text-warning hover:border-warning/70",
+      )}
+    >
+      {row.store_name}
+      {!row.is_done && (
+        <span className="ml-1.5 font-bold">
+          {format.integer(row.remaining)} left
+        </span>
+      )}
+    </button>
   );
 }
 
