@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { use, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import {
@@ -7,6 +8,7 @@ import {
   ArrowRight,
   FileSpreadsheet,
   Plus,
+  Tags,
   Trash2,
   Wand2,
 } from "lucide-react";
@@ -216,6 +218,13 @@ export default function PackingPage({
                 <FileSpreadsheet />{" "}
                 {downloadPackingList.isPending ? "Preparing…" : "Packing list"}
               </Button>
+              {cartons.length > 0 && (
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href={`/orders/${orderId}/stickers`}>
+                    <Tags /> Box stickers
+                  </Link>
+                </Button>
+              )}
               {order.data.status === "packed" && (
                 <Button
                   variant="secondary"

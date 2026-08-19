@@ -154,3 +154,24 @@
     @apply font-mono tabular-nums;
   }
 }
+
+/*
+  Box stickers. The screen shows the same markup the printer gets, so all
+  this does is take the furniture away and cut a page after every sheet.
+*/
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .sheet {
+    break-inside: avoid;
+    break-after: page;
+  }
+  .sheet:last-child {
+    break-after: auto;
+  }
+}

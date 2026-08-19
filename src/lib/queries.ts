@@ -210,6 +210,26 @@ export const useDisplayCartons = (
     enabled: step !== null,
   });
 
+/**
+ * Every box on the order, or every box for one store — what the stickers
+ * print from. One page rather than the drill-down's paging: a sheet per box
+ * is only useful printed in one run.
+ */
+export const useDisplayStickerCartons = (
+  orderId: number,
+  storeId: number | null,
+) =>
+  useQuery({
+    queryKey: ["display-orders", orderId, "cartons", "all", storeId],
+    queryFn: () =>
+      api.get<Paginated<DisplayCarton>>(
+        `/display-orders/${orderId}/cartons/${query({
+          store: storeId ?? undefined,
+          page_size: 1000,
+        })}`,
+      ),
+  });
+
 export function useDisplayOrderAction(orderId: number, storeId: number | null) {
   const client = useQueryClient();
   const planKey = ["display-orders", orderId, "packing", storeId];

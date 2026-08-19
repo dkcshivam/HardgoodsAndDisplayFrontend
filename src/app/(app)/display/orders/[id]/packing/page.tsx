@@ -11,6 +11,7 @@ import {
   Info,
   Package,
   Pencil,
+  Tags,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -171,6 +172,13 @@ export default function DisplayPackingPage({
                 >
                   <Download />
                   {downloadPackingList.isPending ? "Building…" : "Packing list"}
+                </Button>
+              )}
+              {data.carton_count > 0 && (
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href={`/display/orders/${orderId}/stickers`}>
+                    <Tags /> Box stickers
+                  </Link>
                 </Button>
               )}
               {order.data.status === "packed" && (
