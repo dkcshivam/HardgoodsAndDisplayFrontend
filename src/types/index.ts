@@ -159,6 +159,8 @@ export interface OrderLine {
   /** Set per order: the same SKU ships in whatever finish was asked for. */
   color: string;
   quantity: number;
+  /** Unit price on this order. The invoice multiplies it by what ships. */
+  rate_usd: number | null;
 }
 
 export interface Carton {
@@ -207,6 +209,14 @@ export interface Blocker {
   code: BlockerCode;
   message: string;
   carton_id: number | null;
+}
+
+/** What one style sells for on one display order — never per store. */
+export interface DisplayOrderRate {
+  id?: number;
+  product: number;
+  product_style_no?: string;
+  rate_usd: number;
 }
 
 export interface Order {
@@ -361,6 +371,7 @@ export interface DisplayOrder {
   shipping_address: ShippingAddress;
   status: OrderStatus;
   lines: DisplayOrderLine[];
+  rates: DisplayOrderRate[];
   carton_count: number;
   created_at: string;
 }

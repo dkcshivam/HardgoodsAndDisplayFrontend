@@ -9,8 +9,10 @@ import {
   Copy,
   Download,
   Info,
+  IndianRupee,
   Package,
   Pencil,
+  Receipt,
   Tags,
   Trash2,
 } from "lucide-react";
@@ -24,6 +26,8 @@ import { useToast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ReconciliationBar } from "@/components/packing/reconciliation-bar";
 import { TemplateDialog } from "@/components/display/template-dialog";
+import { RatesDialog } from "@/components/packing/rates-dialog";
+import type { RateRow } from "@/components/packing/rates-dialog";
 import {
   useDisplayCartons,
   useDisplayOrder,
@@ -38,6 +42,7 @@ import { cn } from "@/lib/utils";
 import type {
   Adjustment,
   ApplicableTemplate,
+  DisplayOrder,
   QuantityRow,
   StoreProgress,
   TemplateContent,
@@ -62,8 +67,18 @@ export default function DisplayPackingPage({
     deleteStep,
     replicatePlan,
     downloadPackingList,
+    downloadInvoice,
+    saveRates,
     advance,
   } = useDisplayOrderAction(orderId, store);
+
+  const [pricing, setPricing] = useState(false);
+  // The API sends decimals as numbers; the form edits text.
+  const priced = new Map(
+    (order.data?.rates ?? []).map(
+      (rate) => [rate.product, String(rate.rate_usd)] as const,
+    ),
+  );
 
   const removeTemplate = useRemove("pack-templates");
 
@@ -181,18 +196,28 @@ export default function DisplayPackingPage({
                   </Link>
                 </Button>
               )}
-              {order.data.status === "packed" && (
+              {data.carton_count > 0 && (
                 <Button
                   variant="secondary"
                   size="sm"
+                  onClick={() => setPricing(true)}
+                >
+                  <IndianRupee /> Rates
+                </Button>
+              )}
+              {data.carton_count > 0 && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={downloadInvoice.isPending}
                   onClick={() =>
-                    advance.mutate(undefined, {
-                      onSuccess: () => toast.success("Marked shipped"),
-                      onError: () => toast.error("Could not advance"),
+                    downloadInvoice.mutate(order.data!.number, {
+                      onError: () => toast.error("Could not build the invoice"),
                     })
                   }
                 >
-                  Mark shipped <ArrowRight />
+                  <Receipt />
+                  {downloadInvoice.isPending ? "Building…" : "Invoice"}
                 </Button>
               )}
               {order.data.status === "packing" && (
@@ -678,6 +703,30 @@ export default function DisplayPackingPage({
         />
       )}
 
+      <RatesDialog
+        open={pricing}
+        onClose={() => setPricing(false)}
+        saving={saveRates.isPending}
+        rows={styleRows(order.data, priced)}
+        onSave={(rates) =>
+          saveRates.mutate(
+            Object.entries(rates)
+              .filter(([, rate]) => rate.trim())
+              .map(([product, rate]) => ({
+                product: Number(product),
+                rate_usd: rate.trim(),
+              })),
+            {
+              onSuccess: () => {
+                toast.success("Rates saved");
+                setPricing(false);
+              },
+              onError: () => toast.error("Could not save the rates"),
+            },
+          )
+        }
+      />
+
       <ConfirmDialog
         open={dropping !== null}
         onOpenChange={(next) => !next && setDropping(null)}
@@ -966,6 +1015,26 @@ function StepCartonsDialog({
         </DialogBody>
       </DialogContent>
     </DialogRoot>
+  );
+}
+
+/** The order names a style once per store; a rate wants it once. */
+function styleRows(
+  order: DisplayOrder,
+  priced: Map<number, string>,
+): RateRow[] {
+  const seen = new Map<number, RateRow>();
+  for (const line of order.lines) {
+    if (seen.has(line.product)) continue;
+    seen.set(line.product, {
+      product: line.product,
+      style_no: line.product_style_no,
+      name: line.product_description,
+      rate: priced.get(line.product) ?? "",
+    });
+  }
+  return [...seen.values()].sort((a, b) =>
+    a.style_no.localeCompare(b.style_no, undefined, { numeric: true }),
   );
 }
 

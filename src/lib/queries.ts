@@ -301,6 +301,20 @@ export function useDisplayOrderAction(orderId: number, storeId: number | null) {
           `packing-list-${orderNumber}.xlsx`,
         ),
     }),
+    downloadInvoice: useMutation({
+      mutationFn: (orderNumber: string) =>
+        api.download(
+          `/display-orders/${orderId}/invoice/`,
+          `invoice-${orderNumber}.xlsx`,
+        ),
+    }),
+    // Rates only — `lines` left out of the payload, so the order's quantities
+    // and the cartons counted against them are not touched.
+    saveRates: useMutation({
+      mutationFn: (rates: { product: number; rate_usd: string }[]) =>
+        api.patch<DisplayOrder>(`/display-orders/${orderId}/`, { rates }),
+      onSuccess: refresh,
+    }),
   };
 }
 
@@ -328,6 +342,17 @@ export function useOrderAction(orderId: number) {
           `/orders/${orderId}/packing-list/`,
           `packing-list-${orderNumber}.xlsx`,
         ),
+    }),
+    downloadInvoice: useMutation({
+      mutationFn: (orderNumber: string) =>
+        api.download(`/orders/${orderId}/invoice/`, `invoice-${orderNumber}.xlsx`),
+    }),
+    // A hardgoods line is already one row per product, so the rate rides on
+    // it — which means sending the lines back whole, quantities included.
+    saveRates: useMutation({
+      mutationFn: (lines: unknown[]) =>
+        api.patch<Order>(`/orders/${orderId}/`, { lines }),
+      onSuccess: refresh,
     }),
   };
 }

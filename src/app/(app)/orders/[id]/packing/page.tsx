@@ -7,7 +7,9 @@ import {
   AlertTriangle,
   ArrowRight,
   FileSpreadsheet,
+  IndianRupee,
   Plus,
+  Receipt,
   Tags,
   Trash2,
   Wand2,
@@ -20,6 +22,8 @@ import { Table, THead, TH, TR, TD, EmptyRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { ReconciliationBar } from "@/components/packing/reconciliation-bar";
+import { RatesDialog } from "@/components/packing/rates-dialog";
+import type { RateRow } from "@/components/packing/rates-dialog";
 import { useOrder, useOrderAction, usePackingPlan } from "@/lib/queries";
 import { api, ApiError } from "@/lib/api";
 import { cbm, format } from "@/lib/calc";
@@ -43,8 +47,16 @@ export default function PackingPage({
 
   const order = useOrder(orderId);
   const plan = usePackingPlan(orderId);
-  const { autoPack, savePacking, advance, downloadPackingList } =
-    useOrderAction(orderId);
+  const {
+    autoPack,
+    savePacking,
+    advance,
+    downloadPackingList,
+    downloadInvoice,
+    saveRates,
+  } = useOrderAction(orderId);
+
+  const [pricing, setPricing] = useState(false);
 
   const [cartons, setCartons] = useState<CartonDraft[]>([]);
   const [dirty, setDirty] = useState(false);
@@ -225,18 +237,38 @@ export default function PackingPage({
                   </Link>
                 </Button>
               )}
-              {order.data.status === "packed" && (
+              {cartons.length > 0 && (
                 <Button
                   variant="secondary"
                   size="sm"
+                  onClick={() => setPricing(true)}
+                >
+                  <IndianRupee /> Rates
+                </Button>
+              )}
+              {cartons.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={dirty || downloadInvoice.isPending}
+                  title={
+                    dirty
+                      ? "Save the plan first — the invoice is built from what is stored."
+                      : "Download the commercial invoice as an Excel sheet"
+                  }
                   onClick={() =>
-                    advance.mutate(undefined, {
-                      onSuccess: () => toast.success("Marked shipped"),
-                      onError: () => toast.error("Could not advance"),
+                    downloadInvoice.mutate(order.data.number, {
+                      onError: (error) =>
+                        toast.error(
+                          error instanceof ApiError
+                            ? error.detail
+                            : "Could not build the invoice",
+                        ),
                     })
                   }
                 >
-                  Mark shipped <ArrowRight />
+                  <Receipt />
+                  {downloadInvoice.isPending ? "Preparing…" : "Invoice"}
                 </Button>
               )}
               {order.data.status === "packing" && (
@@ -488,6 +520,37 @@ export default function PackingPage({
           </Button>
         </div>
       </footer>
+
+      <RatesDialog
+        open={pricing}
+        onClose={() => setPricing(false)}
+        saving={saveRates.isPending}
+        rows={(order.data.lines ?? []).map(
+          (line): RateRow => ({
+            product: line.product,
+            style_no: line.product_style_no,
+            name: line.product_description,
+            rate: line.rate_usd === null ? "" : String(line.rate_usd),
+          }),
+        )}
+        onSave={(rates) =>
+          saveRates.mutate(
+            (order.data.lines ?? []).map((line) => ({
+              product: line.product,
+              color: line.color,
+              quantity: line.quantity,
+              rate_usd: (rates[line.product] ?? "").trim() || null,
+            })),
+            {
+              onSuccess: () => {
+                toast.success("Rates saved");
+                setPricing(false);
+              },
+              onError: () => toast.error("Could not save the rates"),
+            },
+          )
+        }
+      />
 
       <ConfirmDialog
         open={confirmAutoPack}
