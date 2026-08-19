@@ -18,7 +18,7 @@ import {
   TD,
   EmptyRow,
 } from "@/components/ui/table";
-import { useDisplayOrders, useMerchants, useStores } from "@/lib/queries";
+import { useDisplayOrders, useMerchants } from "@/lib/queries";
 import { useSort } from "@/lib/sort";
 import { downloadOrderTemplate } from "@/lib/order-template";
 import { useToast } from "@/components/ui/toast";
@@ -38,21 +38,13 @@ export default function DisplayOrdersPage() {
   const merchants = useMerchants({ is_active: true });
   const rows = data?.results ?? [];
 
-  // The template is a column per store, so it is written from the live list
-  // rather than kept as a file that would fall behind it.
   const toast = useToast();
-  const stores = useStores({ is_active: true, page_size: 1000 });
   const [writing, setWriting] = useState(false);
 
   async function downloadTemplate() {
-    const list = stores.data?.results ?? [];
-    if (list.length === 0) {
-      toast.error("No stores yet — add them before taking a template.");
-      return;
-    }
     setWriting(true);
     try {
-      await downloadOrderTemplate(list);
+      await downloadOrderTemplate();
     } catch {
       toast.error("Could not build the template.");
     } finally {
@@ -85,7 +77,7 @@ export default function DisplayOrdersPage() {
                 variant="secondary"
                 size="sm"
                 onClick={downloadTemplate}
-                disabled={writing || stores.isLoading}
+                disabled={writing}
               >
                 <Download /> {writing ? "Building…" : "Order sheet template"}
               </Button>

@@ -1,52 +1,58 @@
 "use client";
 
 import writeXlsxFile from "write-excel-file/browser";
-import type { Store } from "@/types";
 
 /**
- * The blank order sheet: style numbers down, one column per store across.
+ * The blank order sheet: a style per row, a store per column.
  *
- * Built when it is asked for rather than shipped as a file, because the store
- * columns are the point of it. A fixed file would list whatever stores existed
- * the day it was written, and every column that had since been added or
- * renamed would come back from the importer as a store that does not exist.
+ * The store columns are left empty on purpose. Type the store numbers you are
+ * ordering for across the top and upload it — the app checks them against the
+ * store list and tells you which ones it does not have yet, which is a better
+ * answer than a template that guessed.
  */
 
 /** Rows left blank for typing into. Excel adds more if they run out. */
 const BLANK_ROWS = 200;
 
+/** Columns ruled off for stores. Nothing stops more being added past them. */
+const STORE_COLUMNS = 60;
+
 const HEADINGS = ["S NO", "Style Name", "Style No"];
 
 type Cell = {
-  value?: string | number;
+  value?: string;
   type?: typeof String | typeof Number;
   fontWeight?: "bold";
-  align?: "left" | "center" | "right";
-  wrap?: boolean;
+  align?: "center";
+  alignVertical?: "center";
+  height?: number;
 };
 
-export async function downloadOrderTemplate(stores: Store[]): Promise<void> {
-  const names = stores.map((store) => store.name);
+export async function downloadOrderTemplate(): Promise<void> {
+  const heading = (value?: string): Cell => ({
+    value,
+    fontWeight: "bold",
+    align: "center",
+    alignVertical: "center",
+    height: 28,
+  });
 
   const header: Cell[] = [
-    ...HEADINGS.map((value) => ({ value, fontWeight: "bold" as const, align: "left" as const })),
-    ...names.map((value) => ({
-      value,
-      fontWeight: "bold" as const,
-      align: "center" as const,
-      wrap: true,
-    })),
-    { value: "QTY TOTAL", fontWeight: "bold" as const, align: "center" as const },
+    ...HEADINGS.map((value) => heading(value)),
+    // Empty, but styled and sized, so the row reads as somewhere to type.
+    ...Array.from({ length: STORE_COLUMNS }, () => heading()),
   ];
 
-  // Typed but empty, so Excel treats a quantity as a number the moment it is
-  // typed rather than as text that sorts oddly later.
+  // Typed but empty, so a quantity is a number the moment it is typed rather
+  // than text that sorts oddly later.
   const blank: Cell[] = [
-    { type: Number, align: "left" },
-    { type: String, align: "left" },
-    { type: String, align: "left" },
-    ...names.map(() => ({ type: Number, align: "center" as const })),
-    { type: Number, align: "center" as const },
+    { type: Number, align: "center" },
+    { type: String },
+    { type: String },
+    ...Array.from({ length: STORE_COLUMNS }, (): Cell => ({
+      type: Number,
+      align: "center",
+    })),
   ];
 
   const data = [header, ...Array.from({ length: BLANK_ROWS }, () => blank)];
@@ -60,8 +66,7 @@ export async function downloadOrderTemplate(stores: Store[]): Promise<void> {
       { width: 8 },
       { width: 34 },
       { width: 20 },
-      ...names.map(() => ({ width: 12 })),
-      { width: 12 },
+      ...Array.from({ length: STORE_COLUMNS }, () => ({ width: 12 })),
     ],
   }).toFile("dkc-display-order-template.xlsx");
 }
