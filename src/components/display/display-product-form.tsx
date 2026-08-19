@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardBody,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -374,7 +373,6 @@ export function DisplayProductForm({
       <div className="mx-auto max-w-3xl space-y-5 pb-10">
         <PageHeader
           title={product ? product.style_no : "New display product"}
-          description="A display item has no box of its own — the pack template carries it."
         />
 
         <Card>
@@ -405,7 +403,7 @@ export function DisplayProductForm({
             </FieldRow>
 
             <FieldRow className="sm:grid-cols-2">
-              <Field label="Style name" hint="The buyer's name for the style.">
+              <Field label="Style name">
                 <Input
                   value={draft.style_name}
                   onChange={(event) => set({ style_name: event.target.value })}
@@ -444,9 +442,6 @@ export function DisplayProductForm({
               <CardTitle>
                 Photos<span className="ml-0.5 text-destructive">*</span>
               </CardTitle>
-              <CardDescription>
-                What the item looks like, so a packer can confirm it by eye.
-              </CardDescription>
             </div>
           </CardHeader>
           <CardBody>
@@ -468,10 +463,6 @@ export function DisplayProductForm({
           <CardHeader>
             <div>
               <CardTitle>How it packs</CardTitle>
-              <CardDescription>
-                Parts are packed separately, and may go into different
-                templates.
-              </CardDescription>
             </div>
           </CardHeader>
           <CardBody>
@@ -519,7 +510,6 @@ export function DisplayProductForm({
               label="Customs description"
               required
               error={errors.customs_description || undefined}
-              hint="The formal name for shipping documents; often differs from the description."
             >
               <Input
                 value={draft.customs_description}
@@ -549,9 +539,6 @@ export function DisplayProductForm({
             <CardHeader>
               <div>
                 <CardTitle>Parts</CardTitle>
-                <CardDescription>
-                  Each part carries its own weight, size and customs details.
-                </CardDescription>
               </div>
               <Button
                 variant="secondary"
@@ -607,7 +594,6 @@ export function DisplayProductForm({
                   ? "All three are required."
                   : undefined
               }
-              hint="The item itself. Used for customs and to warn when a template's box is mostly air."
             >
               <div className="flex items-center gap-2">
                 {(["length_in", "width_in", "height_in"] as const).map((key) => (
@@ -631,7 +617,6 @@ export function DisplayProductForm({
               label="Product weight (kg)"
               required
               error={errors.product_weight_kg || undefined}
-              hint="The bare item, no packaging."
             >
               <Input
                 type="number"

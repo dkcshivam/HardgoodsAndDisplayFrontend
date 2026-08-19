@@ -213,7 +213,7 @@ export default function NewOrderPage() {
                 />
               </Field>
             </FieldRow>
-            <Field label="Country" hint="Two-letter ISO code.">
+            <Field label="Country">
               <Input
                 maxLength={2}
                 value={address.country}

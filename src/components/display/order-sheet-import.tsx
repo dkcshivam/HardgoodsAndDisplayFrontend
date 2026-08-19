@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardBody,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -199,10 +198,6 @@ export function OrderSheetImport({
       <CardHeader>
         <div>
           <CardTitle>Build from the order sheet</CardTitle>
-          <CardDescription>
-            Style numbers down, stores across. Anything the app does not have
-            yet is listed so you can go and add it.
-          </CardDescription>
         </div>
         {file && (
           <Button
@@ -230,10 +225,6 @@ export function OrderSheetImport({
             <Upload className="size-5 text-muted-foreground" />
             <span className="text-sm font-medium">
               {busy ? "Reading…" : "Choose an .xlsx order sheet"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              The tab is picked after it opens, so one file with many shipments
-              is fine.
             </span>
           </button>
         ) : (

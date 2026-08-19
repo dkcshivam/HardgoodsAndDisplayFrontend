@@ -237,7 +237,7 @@ function MerchantDialog({
                 onChange={(event) => set({ city: event.target.value })}
               />
             </Field>
-            <Field label="Country" hint="Two-letter ISO code.">
+            <Field label="Country">
               <Input
                 maxLength={2}
                 value={form.country ?? ""}

@@ -236,7 +236,6 @@ function StoreDialog({
           <Field
             label="Store"
             required
-            hint='Number and name together, e.g. "118 Portland Pearl".'
           >
             <Input
               value={form.name ?? ""}
@@ -282,7 +281,7 @@ function StoreDialog({
           </FieldRow>
 
           <FieldRow className="sm:grid-cols-2">
-            <Field label="Country" hint="Two-letter ISO code.">
+            <Field label="Country">
               <Input
                 maxLength={2}
                 value={form.ship_country ?? ""}

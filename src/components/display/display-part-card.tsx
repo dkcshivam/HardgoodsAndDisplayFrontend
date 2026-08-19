@@ -135,7 +135,6 @@ export function DisplayPartCard({
               label="Customs description"
               required
               error={errors.customs_description || undefined}
-              hint="Parts of different materials classify differently."
             >
               <Input
                 value={part.customs_description}
@@ -167,7 +166,6 @@ export function DisplayPartCard({
                 ? "All three are required."
                 : undefined
             }
-            hint="The part itself, not a box."
           >
             <div className="flex items-center gap-2">
               {(["length_in", "width_in", "height_in"] as const).map((key) => (
@@ -193,7 +191,6 @@ export function DisplayPartCard({
             label="Part weight (kg)"
             required
             error={errors.product_weight_kg || undefined}
-            hint="The bare part, no packaging."
           >
             <Input
               type="number"
