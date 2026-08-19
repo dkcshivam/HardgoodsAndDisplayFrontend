@@ -186,7 +186,7 @@ export default function DisplayPackingPage({
                   }
                 >
                   <Download />
-                  {downloadPackingList.isPending ? "Building…" : "Packing list"}
+                  {downloadPackingList.isPending ? "Building…" : "Download packing list"}
                 </Button>
               )}
               {data.carton_count > 0 && (

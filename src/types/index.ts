@@ -72,6 +72,7 @@ export interface ProductImage {
 export interface ProductPart extends PackSpec {
   id: number;
   name: string;
+  is_delegate: boolean;
   description: string;
   customs_description: string;
   hsn_code: string;
@@ -93,6 +94,7 @@ export interface ProductListItem {
   category: number | null;
   category_name: string;
   is_multi_part: boolean;
+  is_delegate: boolean;
   part_count: number;
   pack_per_box: number;
   main_image: string | null;
@@ -118,6 +120,8 @@ export interface Product extends Partial<PackSpec> {
 
   /** Fixed at creation — the shape every carton for this SKU was built from. */
   is_multi_part: boolean;
+  /** Set per piece; a multi-part product flags each part on its own. */
+  is_delegate: boolean;
   /** On an order. The database refuses the delete; the form says so first. */
   is_in_use: boolean;
   status: ProductStatus;
@@ -259,6 +263,7 @@ export interface PackingPlan {
 export interface DisplayProductPart {
   id: number;
   name: string;
+  is_delegate: boolean;
   description: string;
   images: ProductImage[];
   customs_description: string;
@@ -285,6 +290,8 @@ export interface DisplayProduct {
 
   /** Fixed at creation — every template item for this SKU assumed it. */
   is_multi_part: boolean;
+  /** Set per piece; a multi-part product flags each part on its own. */
+  is_delegate: boolean;
   status: ProductStatus;
 
   /** Empty on a multi-part product; its parts carry these instead. */

@@ -203,7 +203,8 @@ export default function PackingPage({
                 }
                 disabled={autoPack.isPending}
               >
-                <Wand2 /> {autoPack.isPending ? "Packing…" : "Auto-pack"}
+                <Wand2 />{" "}
+                {autoPack.isPending ? "Generating…" : "Generate packing list"}
               </Button>
               <Button
                 variant="secondary"
@@ -228,7 +229,7 @@ export default function PackingPage({
                 }
               >
                 <FileSpreadsheet />{" "}
-                {downloadPackingList.isPending ? "Preparing…" : "Packing list"}
+                {downloadPackingList.isPending ? "Preparing…" : "Download packing list"}
               </Button>
               {cartons.length > 0 && (
                 <Button variant="secondary" size="sm" asChild>
@@ -556,7 +557,7 @@ export default function PackingPage({
         open={confirmAutoPack}
         onOpenChange={setConfirmAutoPack}
         title="Replace the current plan?"
-        message="Auto-pack rebuilds every carton from the ordered products' recipes. Edits made here will be lost."
+        message="Generating rebuilds every carton from the ordered products' recipes. Edits made here will be lost."
         confirmLabel="Replace"
         busy={autoPack.isPending}
         onConfirm={() => {

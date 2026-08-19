@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
-import { Field, FieldRow } from "@/components/ui/field";
+import { CheckField, Field, FieldRow } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -57,6 +57,7 @@ export interface ProductDraft extends PackSpecDraft {
   customs_description: string;
   hsn_code: string;
   is_multi_part: boolean;
+  is_delegate: boolean;
   /** Read-only — on an order, so the delete is refused. */
   is_in_use: boolean;
   status: ProductStatus;
@@ -78,6 +79,7 @@ export const BLANK_PRODUCT: ProductDraft = {
   customs_description: "",
   hsn_code: "",
   is_multi_part: false,
+  is_delegate: false,
   is_in_use: false,
   status: "active",
   assembled_length_in: null,
@@ -101,6 +103,7 @@ export function toDraft(product: Product): ProductDraft {
     customs_description: product.customs_description,
     hsn_code: product.hsn_code,
     is_multi_part: product.is_multi_part,
+    is_delegate: product.is_delegate,
     is_in_use: product.is_in_use,
     status: product.status,
     assembled_length_in: product.assembled_length_in,
@@ -448,12 +451,19 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               />
             </Field>
 
-            <Field label="Style name">
-              <Input
-                value={form.style_name}
-                onChange={(event) => set({ style_name: event.target.value })}
+            <FieldRow className="sm:grid-cols-2">
+              <Field label="Style name">
+                <Input
+                  value={form.style_name}
+                  onChange={(event) => set({ style_name: event.target.value })}
+                />
+              </Field>
+              <CheckField
+                label="Delegate"
+                checked={form.is_delegate}
+                onChange={(next) => set({ is_delegate: next })}
               />
-            </Field>
+            </FieldRow>
 
             <Field
               label="Description"

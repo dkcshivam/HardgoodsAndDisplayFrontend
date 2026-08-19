@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DerivedField, Field, FieldRow } from "@/components/ui/field";
+import { CheckField, DerivedField, Field, FieldRow } from "@/components/ui/field";
 import {
   PhotoGallery,
   type PendingPhoto,
@@ -17,6 +17,7 @@ import type { ProductImage } from "@/types";
 export interface DisplayPartDraft {
   id?: number;
   name: string;
+  is_delegate: boolean;
   description: string;
   customs_description: string;
   hsn_code: string;
@@ -32,6 +33,7 @@ export interface DisplayPartDraft {
 export function blankDisplayPart(sortOrder: number): DisplayPartDraft {
   return {
     name: "",
+    is_delegate: false,
     description: "",
     customs_description: "",
     hsn_code: "",
@@ -128,6 +130,11 @@ export function DisplayPartCard({
                 onChange={(event) => onChange({ description: event.target.value })}
               />
             </Field>
+            <CheckField
+              label="Delegate"
+              checked={part.is_delegate}
+              onChange={(next) => onChange({ is_delegate: next })}
+            />
           </FieldRow>
 
           <FieldRow className="sm:grid-cols-2">

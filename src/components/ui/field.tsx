@@ -76,3 +76,28 @@ export function DerivedField({
     </div>
   );
 }
+
+/** A single flag, sized to sit in a FieldRow beside the inputs. */
+export function CheckField({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="flex h-9 items-center gap-2.5 self-end rounded-md border border-input bg-card px-3">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="size-4 accent-[var(--color-primary)]"
+      />
+      <span className="text-xs font-medium text-secondary-foreground">
+        {label}
+      </span>
+    </label>
+  );
+}

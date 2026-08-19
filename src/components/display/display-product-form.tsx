@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
-import { DerivedField, Field, FieldRow } from "@/components/ui/field";
+import { CheckField, DerivedField, Field, FieldRow } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import {
   DisplayPartCard,
@@ -45,6 +45,7 @@ type Draft = {
   customs_description: string;
   hsn_code: string;
   is_multi_part: boolean;
+  is_delegate: boolean;
   status: "active" | "inactive";
   product_weight_kg: number | null;
   length_in: number | null;
@@ -63,6 +64,7 @@ const BLANK: Draft = {
   customs_description: "",
   hsn_code: "",
   is_multi_part: false,
+  is_delegate: false,
   status: "active",
   product_weight_kg: null,
   length_in: null,
@@ -409,6 +411,11 @@ export function DisplayProductForm({
                   onChange={(event) => set({ style_name: event.target.value })}
                 />
               </Field>
+              <CheckField
+                label="Delegate"
+                checked={draft.is_delegate}
+                onChange={(next) => set({ is_delegate: next })}
+              />
               <Field label="Description" error={errors.description || undefined}>
                 <Input
                   value={draft.description}
