@@ -9,6 +9,8 @@ import { mainImage } from "@/lib/images";
 /** One thing inside the box — a line of the sticker's table. */
 export interface StickerRow {
   key: string;
+  /** Its place in the box, 1-based. Runs on across a box's second sheet. */
+  serial: number;
   style_no: string;
   style_name: string;
   /** Set when the box holds one part of a product rather than all of it. */
@@ -63,11 +65,12 @@ export function displayStickers(
     box_no: carton.carton_no,
     scope_label: "Store",
     scope_value: carton.store_name,
-    rows: carton.contents.map((content) => {
+    rows: carton.contents.map((content, index) => {
       // The carton stores an id; the name and the photo live on the product.
       const product = byId.get(content.product);
       return {
         key: String(content.id),
+        serial: index + 1,
         style_no: content.product_style_no,
         style_name:
           product?.style_name || product?.description || content.description,
@@ -90,10 +93,11 @@ export function hardgoodsStickers(
     box_no: carton.carton_no,
     scope_label: "Order",
     scope_value: orderNumber,
-    rows: carton.contents.map((content) => {
+    rows: carton.contents.map((content, index) => {
       const product = byId.get(content.product);
       return {
         key: String(content.id),
+        serial: index + 1,
         style_no: content.product_style_no,
         style_name:
           product?.style_name || product?.description || content.description,

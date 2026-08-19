@@ -43,13 +43,17 @@ export function BoxSticker({
 
       <table className="-mt-px w-full table-fixed border-collapse">
         <colgroup>
-          <col className="w-[24%]" />
-          <col className={photos ? "w-[30%]" : "w-[59%]"} />
-          {photos && <col className="w-[29%]" />}
+          <col className="w-[8%]" />
+          <col className="w-[22%]" />
+          <col className={photos ? "w-[27%]" : "w-[53%]"} />
+          {photos && <col className="w-[26%]" />}
           <col className="w-[17%]" />
         </colgroup>
         <thead>
           <tr>
+            <th className={`${cell} p-2 text-xs font-bold uppercase tracking-wider`}>
+              S No
+            </th>
             <th className={`${cell} p-2 text-xs font-bold uppercase tracking-wider`}>
               Style Number
             </th>
@@ -71,7 +75,7 @@ export function BoxSticker({
             <tr>
               <td
                 className={`${cell} p-6 text-center text-sm italic`}
-                colSpan={photos ? 4 : 3}
+                colSpan={photos ? 5 : 4}
               >
                 Empty box
               </td>
@@ -79,6 +83,9 @@ export function BoxSticker({
           )}
           {rows.map((row) => (
             <tr key={row.key}>
+              <td className={`${cell} tabular p-2 text-center text-base font-bold`}>
+                {row.serial}
+              </td>
               <td className={`${cell} tabular p-2 text-sm font-semibold`}>
                 {row.style_no}
               </td>
@@ -116,7 +123,7 @@ export function BoxSticker({
       </table>
 
       <div className="mt-3 flex justify-between text-[10px] font-medium uppercase tracking-widest text-neutral-600">
-        <span>Signature by Pinto</span>
+        <span>Signature by Tarique</span>
         <span>Signature by HOD</span>
       </div>
     </article>
