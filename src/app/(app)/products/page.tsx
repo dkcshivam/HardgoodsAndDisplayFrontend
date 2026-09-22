@@ -63,7 +63,7 @@ export default function ProductsPage() {
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Search style no, name, description, HSN…"
+            placeholder="Search style no, name, description, HSN, HTS…"
           />
           <Select
             className="w-40"

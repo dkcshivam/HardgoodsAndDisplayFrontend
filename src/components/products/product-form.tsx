@@ -40,7 +40,6 @@ import {
 import { cbm, grossWeight, format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import {
-  customsErrors,
   hasPhoto,
   packSpecErrors,
   missingNumber,
@@ -56,6 +55,7 @@ export interface ProductDraft extends PackSpecDraft {
   category: number | null;
   customs_description: string;
   hsn_code: string;
+  hts_code: string;
   is_multi_part: boolean;
   is_delegate: boolean;
   /** Read-only — on an order, so the delete is refused. */
@@ -78,6 +78,7 @@ export const BLANK_PRODUCT: ProductDraft = {
   category: null,
   customs_description: "",
   hsn_code: "",
+  hts_code: "",
   is_multi_part: false,
   is_delegate: false,
   is_in_use: false,
@@ -102,6 +103,7 @@ export function toDraft(product: Product): ProductDraft {
     category: product.category,
     customs_description: product.customs_description,
     hsn_code: product.hsn_code,
+    hts_code: product.hts_code,
     is_multi_part: product.is_multi_part,
     is_delegate: product.is_delegate,
     is_in_use: product.is_in_use,
@@ -176,6 +178,7 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
             ...BLANK_PACK_SPEC,
             customs_description: "",
             hsn_code: "",
+            hts_code: "",
             pack_per_box: 1,
             parts:
               current.parts.length >= 2
@@ -318,7 +321,6 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
       } else {
         form.parts.forEach((part, index) => {
           const partFound = {
-            ...customsErrors(part),
             ...packSpecErrors(part),
           };
           if (!part.name.trim()) partFound.name = REQUIRED;
@@ -334,7 +336,7 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
         }
       }
     } else {
-      Object.assign(found, customsErrors(form), packSpecErrors(form));
+      Object.assign(found, packSpecErrors(form));
       if (missingNumber(form.pack_per_box) || form.pack_per_box < 1) {
         found.pack_per_box = "At least 1.";
       }
@@ -566,31 +568,30 @@ export function ProductForm({ initial }: { initial: ProductDraft }) {
               <CardTitle>Customs</CardTitle>
             </CardHeader>
             <CardBody className="space-y-4">
-              <Field
-                label="Customs description"
-                required
-                error={errors.customs_description || undefined}
-              >
+              <Field label="Customs description">
                 <Input
                   value={form.customs_description}
-                  invalid={Boolean(errors.customs_description)}
                   onChange={(event) =>
                     set({ customs_description: event.target.value })
                   }
                 />
               </Field>
-              <Field
-                label="HSN code"
-                required
-                error={errors.hsn_code || undefined}
-              >
-                <Input
-                  value={form.hsn_code}
-                  invalid={Boolean(errors.hsn_code)}
-                  onChange={(event) => set({ hsn_code: event.target.value })}
-                  className="tabular sm:w-40"
-                />
-              </Field>
+              <FieldRow className="sm:grid-cols-2">
+                <Field label="HSN code">
+                  <Input
+                    value={form.hsn_code}
+                    onChange={(event) => set({ hsn_code: event.target.value })}
+                    className="tabular"
+                  />
+                </Field>
+                <Field label="HTS code">
+                  <Input
+                    value={form.hts_code}
+                    onChange={(event) => set({ hts_code: event.target.value })}
+                    className="tabular"
+                  />
+                </Field>
+              </FieldRow>
             </CardBody>
           </Card>
         )}

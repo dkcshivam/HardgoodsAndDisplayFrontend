@@ -21,6 +21,7 @@ export interface DisplayPartDraft {
   description: string;
   customs_description: string;
   hsn_code: string;
+  hts_code: string;
   product_weight_kg: number | null;
   length_in: number | null;
   width_in: number | null;
@@ -37,6 +38,7 @@ export function blankDisplayPart(sortOrder: number): DisplayPartDraft {
     description: "",
     customs_description: "",
     hsn_code: "",
+    hts_code: "",
     product_weight_kg: null,
     length_in: null,
     width_in: null,
@@ -137,29 +139,26 @@ export function DisplayPartCard({
             />
           </FieldRow>
 
+          <Field label="Customs description">
+            <Input
+              value={part.customs_description}
+              onChange={(event) =>
+                onChange({ customs_description: event.target.value })
+              }
+            />
+          </Field>
           <FieldRow className="sm:grid-cols-2">
-            <Field
-              label="Customs description"
-              required
-              error={errors.customs_description || undefined}
-            >
-              <Input
-                value={part.customs_description}
-                invalid={Boolean(errors.customs_description)}
-                onChange={(event) =>
-                  onChange({ customs_description: event.target.value })
-                }
-              />
-            </Field>
-            <Field
-              label="HSN code"
-              required
-              error={errors.hsn_code || undefined}
-            >
+            <Field label="HSN code">
               <Input
                 value={part.hsn_code}
-                invalid={Boolean(errors.hsn_code)}
                 onChange={(event) => onChange({ hsn_code: event.target.value })}
+                className="tabular"
+              />
+            </Field>
+            <Field label="HTS code">
+              <Input
+                value={part.hts_code}
+                onChange={(event) => onChange({ hts_code: event.target.value })}
                 className="tabular"
               />
             </Field>

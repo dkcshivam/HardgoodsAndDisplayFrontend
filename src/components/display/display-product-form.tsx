@@ -29,7 +29,6 @@ import { useCategories, useDisplayPhotoActions, useSave } from "@/lib/queries";
 import { cbm, format } from "@/lib/calc";
 import { ApiError } from "@/lib/api";
 import {
-  customsErrors,
   hasPhoto,
   missingNumber,
   REQUIRED,
@@ -44,6 +43,7 @@ type Draft = {
   category: number | null;
   customs_description: string;
   hsn_code: string;
+  hts_code: string;
   is_multi_part: boolean;
   is_delegate: boolean;
   status: "active" | "inactive";
@@ -63,6 +63,7 @@ const BLANK: Draft = {
   category: null,
   customs_description: "",
   hsn_code: "",
+  hts_code: "",
   is_multi_part: false,
   is_delegate: false,
   status: "active",
@@ -306,7 +307,6 @@ export function DisplayProductForm({
       } else {
         draft.parts.forEach((part, index) => {
           const partFound: Record<string, string> = {
-            ...customsErrors(part),
             ...pieceErrors(part),
           };
           if (!part.name.trim()) partFound.name = REQUIRED;
@@ -322,7 +322,7 @@ export function DisplayProductForm({
         }
       }
     } else {
-      Object.assign(found, customsErrors(draft), pieceErrors(draft));
+      Object.assign(found, pieceErrors(draft));
     }
 
     setErrors(found);
@@ -513,31 +513,30 @@ export function DisplayProductForm({
             <CardTitle>Customs</CardTitle>
           </CardHeader>
           <CardBody className="space-y-4">
-            <Field
-              label="Customs description"
-              required
-              error={errors.customs_description || undefined}
-            >
+            <Field label="Customs description">
               <Input
                 value={draft.customs_description}
-                invalid={Boolean(errors.customs_description)}
                 onChange={(event) =>
                   set({ customs_description: event.target.value })
                 }
               />
             </Field>
-            <Field
-              label="HSN code"
-              required
-              error={errors.hsn_code || undefined}
-            >
-              <Input
-                value={draft.hsn_code}
-                invalid={Boolean(errors.hsn_code)}
-                onChange={(event) => set({ hsn_code: event.target.value })}
-                className="tabular sm:w-40"
-              />
-            </Field>
+            <FieldRow className="sm:grid-cols-2">
+              <Field label="HSN code">
+                <Input
+                  value={draft.hsn_code}
+                  onChange={(event) => set({ hsn_code: event.target.value })}
+                  className="tabular"
+                />
+              </Field>
+              <Field label="HTS code">
+                <Input
+                  value={draft.hts_code}
+                  onChange={(event) => set({ hts_code: event.target.value })}
+                  className="tabular"
+                />
+              </Field>
+            </FieldRow>
           </CardBody>
         </Card>
 

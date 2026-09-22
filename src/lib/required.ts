@@ -3,9 +3,10 @@
  *
  * The API still accepts these blank — a half-filled product is a legitimate
  * row for an importer or the admin to create. This is the packing desk's own
- * rule: a carton cannot be built, weighed or cleared through customs from a
- * product that never answered these, so the form asks while somebody is
- * looking at the item rather than a week later when the order is on the floor.
+ * rule: a carton cannot be built or weighed from a product that never
+ * answered these, so the form asks while somebody is looking at the item
+ * rather than a week later when the order is on the floor. The customs fields
+ * (description, HSN, HTS) are optional everywhere.
  */
 
 /** Blank, whitespace, null and undefined all count as unanswered. */
@@ -21,17 +22,6 @@ export function missingNumber(value: number | null | undefined): boolean {
 }
 
 export const REQUIRED = "Required";
-
-/** Customs will not clear a carton without both of these. */
-export function customsErrors(source: {
-  customs_description: string;
-  hsn_code: string;
-}): Record<string, string> {
-  const found: Record<string, string> = {};
-  if (missing(source.customs_description)) found.customs_description = REQUIRED;
-  if (missing(source.hsn_code)) found.hsn_code = REQUIRED;
-  return found;
-}
 
 /** The box and the three weights every carton figure is derived from. */
 export function packSpecErrors(source: {

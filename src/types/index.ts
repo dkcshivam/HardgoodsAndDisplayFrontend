@@ -76,6 +76,7 @@ export interface ProductPart extends PackSpec {
   description: string;
   customs_description: string;
   hsn_code: string;
+  hts_code: string;
 
   length_in: number | null;
   width_in: number | null;
@@ -117,6 +118,7 @@ export interface Product extends Partial<PackSpec> {
 
   customs_description: string;
   hsn_code: string;
+  hts_code: string;
 
   /** Fixed at creation — the shape every carton for this SKU was built from. */
   is_multi_part: boolean;
@@ -269,6 +271,7 @@ export interface DisplayProductPart {
   images: ProductImage[];
   customs_description: string;
   hsn_code: string;
+  hts_code: string;
 
   product_weight_kg: number | null;
   length_in: number | null;
@@ -288,6 +291,7 @@ export interface DisplayProduct {
   category_name: string;
   customs_description: string;
   hsn_code: string;
+  hts_code: string;
 
   /** Fixed at creation — every template item for this SKU assumed it. */
   is_multi_part: boolean;

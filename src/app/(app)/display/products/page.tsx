@@ -47,6 +47,7 @@ export default function DisplayProductsPage() {
     description: (row) => row.description,
     category: (row) => row.category_name,
     hsn: (row) => row.hsn_code,
+    hts: (row) => row.hts_code,
     // The cell shows three figures; length is the one people scan by.
     size: (row) => row.length_in,
     weight: (row) => row.product_weight_kg,
@@ -155,6 +156,9 @@ export default function DisplayProductsPage() {
                 <SortTH column="hsn" sort={sort} onSort={toggle}>
                   HSN
                 </SortTH>
+                <SortTH column="hts" sort={sort} onSort={toggle}>
+                  HTS
+                </SortTH>
                 <SortTH column="size" sort={sort} onSort={toggle} className="text-center">
                   L × W × H (in)
                 </SortTH>
@@ -170,16 +174,16 @@ export default function DisplayProductsPage() {
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={9}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={10}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={9}>
+                <EmptyRow colSpan={10}>
                   <span className="text-destructive">
                     Could not load display products.
                   </span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={9}>
+                <EmptyRow colSpan={10}>
                   No display products yet. Create one to start building
                   templates.
                 </EmptyRow>
@@ -223,6 +227,9 @@ export default function DisplayProductsPage() {
                   </TD>
                   <TD className="tabular text-secondary-foreground">
                     {product.hsn_code || "—"}
+                  </TD>
+                  <TD className="tabular text-secondary-foreground">
+                    {product.hts_code || "—"}
                   </TD>
                   <TD className="tabular text-center text-secondary-foreground">
                     {format.dimensions(
