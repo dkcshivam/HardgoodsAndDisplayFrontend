@@ -79,7 +79,11 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
     keywords: item.description,
     image: mainImage(item.images),
   }));
-  const onOrder = storeList.filter((store) => chosen.includes(store.id));
+  // In the order they were chosen — the sheet's column order after an upload —
+  // because that order is the one every screen and document follows.
+  const onOrder = chosen.flatMap(
+    (id) => storeList.find((store) => store.id === id) ?? [],
+  );
   const activeStore = onOrder.find((store) => store.id === active) ?? onOrder[0];
 
   // Read on every render rather than folded into state, so a row locks the
@@ -221,13 +225,20 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
       return;
     }
 
+    // The API takes the store order from the first line naming each store, so
+    // the lines go store by store. A sheet's rows run style by style instead.
+    const rank = new Map(chosen.map((id, index) => [id, index]));
+    const byStore = [...complete].sort(
+      (a, b) => (rank.get(a.store) ?? 0) - (rank.get(b.store) ?? 0),
+    );
+
     save.mutate(
       {
         id: order?.id,
         name,
         merchant,
         buyer_name: buyerName,
-        lines: complete.map((row) => ({
+        lines: byStore.map((row) => ({
           store: row.store,
           product: row.product,
           color: row.color.trim(),
@@ -337,7 +348,14 @@ export function DisplayOrderForm({ order }: { order?: DisplayOrder }) {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setChosen(storeList.map((store) => store.id))}
+                  onClick={() =>
+                    setChosen([
+                      ...chosen,
+                      ...storeList
+                        .filter((store) => !chosen.includes(store.id))
+                        .map((store) => store.id),
+                    ])
+                  }
                 >
                   Select all
                 </Button>
