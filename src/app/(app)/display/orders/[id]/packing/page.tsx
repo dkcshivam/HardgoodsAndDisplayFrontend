@@ -84,6 +84,10 @@ export default function DisplayPackingPage({
 
   const removeTemplate = useRemove("pack-templates");
 
+  // Folded away by hand: a merchant with eighty designs turns step 2 into a
+  // scroll past everything below it.
+  const [showDesigns, setShowDesigns] = useState(true);
+
   const [dropping, setDropping] = useState<number | null>(null);
   const [droppingTemplate, setDroppingTemplate] =
     useState<ApplicableTemplate | null>(null);
@@ -384,14 +388,34 @@ export default function DisplayPackingPage({
               <Card>
                 <CardHeader>
                   <div>
-                    <CardTitle>Box designs that fit what is left</CardTitle>
+                    <CardTitle>
+                      Box designs that fit what is left ·{" "}
+                      <span className="tabular">
+                        {data.applicable_templates.length}
+                      </span>
+                    </CardTitle>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       Applying fills out every carton this design still fits.
                       Editing one rebuilds the boxes already packed from it.
                     </p>
                   </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setShowDesigns((shown) => !shown)}
+                  >
+                    <ChevronDown
+                      className={cn(
+                        "transition-transform",
+                        !showDesigns && "-rotate-90",
+                      )}
+                    />
+                    {showDesigns ? "Hide" : "Show"}
+                  </Button>
                 </CardHeader>
 
+                {showDesigns && (
                 <Table>
                   <THead>
                     <tr>
@@ -463,10 +487,17 @@ export default function DisplayPackingPage({
                     ))}
                   </tbody>
                 </Table>
+                )}
 
+                {/* Outside the fold on purpose — folding the list away must
+                    not take the way to make a new design with it. */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-secondary/30 px-5 py-4">
                   <p className="text-xs text-muted-foreground">
-                    Nothing here suits what is left?
+                    {showDesigns
+                      ? "Nothing here suits what is left?"
+                      : `${data.applicable_templates.length} design${
+                          data.applicable_templates.length === 1 ? "" : "s"
+                        } hidden.`}
                   </p>
                   <Button
                     variant="secondary"
