@@ -226,6 +226,23 @@ export interface DisplayOrderRate {
   rate_usd: number;
 }
 
+export interface ExportDetails {
+  invoice_number?: string;
+  invoice_date?: string;
+  po_number?: string;
+  lc_number_date?: string;
+  other_reference?: string;
+  other_consignee?: string;
+  final_destination_country?: string;
+  place_of_receipt?: string;
+  vessel_flight_no?: string;
+  port_of_loading?: string;
+  port_of_discharge?: string;
+  final_destination?: string;
+  shipping_line?: string;
+  container_no?: string;
+}
+
 export interface Order {
   id: number;
   number: string;
@@ -237,6 +254,7 @@ export interface Order {
   status: OrderStatus;
   lines: OrderLine[];
   carton_count: number;
+  export_details?: ExportDetails;
   created_at: string;
 }
 
@@ -386,6 +404,7 @@ export interface DisplayOrder {
   lines: DisplayOrderLine[];
   rates: DisplayOrderRate[];
   carton_count: number;
+  export_details?: ExportDetails;
   created_at: string;
 }
 

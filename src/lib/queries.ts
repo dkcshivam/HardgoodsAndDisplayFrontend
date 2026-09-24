@@ -13,6 +13,7 @@ import type {
   DisplayOrder,
   DisplayPackingPlan,
   DisplayProduct,
+  ExportDetails,
   Merchant,
   Order,
   PackingPlan,
@@ -317,6 +318,11 @@ export function useDisplayOrderAction(orderId: number, storeId: number | null) {
         api.patch<DisplayOrder>(`/display-orders/${orderId}/`, { rates }),
       onSuccess: refresh,
     }),
+    saveExportDetails: useMutation({
+      mutationFn: (export_details: ExportDetails) =>
+        api.patch<DisplayOrder>(`/display-orders/${orderId}/`, { export_details }),
+      onSuccess: refresh,
+    }),
   };
 }
 
@@ -354,6 +360,11 @@ export function useOrderAction(orderId: number) {
     saveRates: useMutation({
       mutationFn: (lines: unknown[]) =>
         api.patch<Order>(`/orders/${orderId}/`, { lines }),
+      onSuccess: refresh,
+    }),
+    saveExportDetails: useMutation({
+      mutationFn: (export_details: ExportDetails) =>
+        api.patch<Order>(`/orders/${orderId}/`, { export_details }),
       onSuccess: refresh,
     }),
   };

@@ -30,6 +30,7 @@ import { TemplateDialog } from "@/components/display/template-dialog";
 import { Gated } from "@/components/packing/gated";
 import { RatesDialog } from "@/components/packing/rates-dialog";
 import type { RateRow } from "@/components/packing/rates-dialog";
+import { PackingExportDetailsForm } from "@/components/display/packing-export-details-form";
 import {
   useDisplayCartons,
   useDisplayOrder,
@@ -71,6 +72,7 @@ export default function DisplayPackingPage({
     downloadPackingList,
     downloadInvoice,
     saveRates,
+    saveExportDetails,
     advance,
   } = useDisplayOrderAction(orderId, store);
 
@@ -307,6 +309,14 @@ export default function DisplayPackingPage({
               )}
             </div>
           </div>
+
+          <PackingExportDetailsForm
+            order={order.data}
+            onSave={(details, options) =>
+              saveExportDetails.mutate(details, options)
+            }
+            isSaving={saveExportDetails.isPending}
+          />
 
           {/* Which store, before anything else: a carton ships to exactly one,
               so there is no such thing as packing the order as a whole. */}
