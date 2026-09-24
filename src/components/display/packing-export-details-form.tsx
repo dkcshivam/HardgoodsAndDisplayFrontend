@@ -11,7 +11,10 @@ import type { DisplayOrder, ExportDetails } from "@/types";
 
 interface PackingExportDetailsFormProps {
   order: DisplayOrder;
-  onSave: (details: ExportDetails, options?: { onSuccess?: () => void; onError?: () => void }) => void;
+  onSave: (
+    details: ExportDetails,
+    options?: { onSuccess?: () => void; onError?: () => void },
+  ) => void;
   isSaving: boolean;
 }
 
@@ -29,7 +32,8 @@ export function PackingExportDetailsForm({
     invoice_number: initial.invoice_number ?? "",
     invoice_date: initial.invoice_date ?? "",
     po_number: initial.po_number ?? "",
-    lc_number_date: initial.lc_number_date ?? "",
+    lc_number: initial.lc_number ?? "",
+    lc_date: initial.lc_date ?? "",
     other_reference: initial.other_reference ?? "",
     other_consignee: initial.other_consignee ?? "",
     final_destination_country: initial.final_destination_country ?? "",
@@ -115,39 +119,46 @@ export function PackingExportDetailsForm({
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Invoice & Reference
             </h4>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
               <Field label="Invoice No">
                 <Input
                   value={form.invoice_number ?? ""}
-                  placeholder="e.g. DKCP-ABC"
                   onChange={(e) => handleChange("invoice_number", e.target.value)}
                 />
               </Field>
               <Field label="Invoice Date">
                 <Input
+                  type="date"
                   value={form.invoice_date ?? ""}
-                  placeholder="e.g. 1-07-2026"
                   onChange={(e) => handleChange("invoice_date", e.target.value)}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  className="cursor-pointer"
                 />
               </Field>
               <Field label="P.O. No.">
                 <Input
                   value={form.po_number ?? ""}
-                  placeholder="e.g. 4500123456"
                   onChange={(e) => handleChange("po_number", e.target.value)}
                 />
               </Field>
-              <Field label="LC No & Date">
+              <Field label="LC No">
                 <Input
-                  value={form.lc_number_date ?? ""}
-                  placeholder="e.g. LC NO. ... DATED: ..."
-                  onChange={(e) => handleChange("lc_number_date", e.target.value)}
+                  value={form.lc_number ?? ""}
+                  onChange={(e) => handleChange("lc_number", e.target.value)}
+                />
+              </Field>
+              <Field label="LC Date">
+                <Input
+                  type="date"
+                  value={form.lc_date ?? ""}
+                  onChange={(e) => handleChange("lc_date", e.target.value)}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  className="cursor-pointer"
                 />
               </Field>
               <Field label="Other Reference">
                 <Input
                   value={form.other_reference ?? ""}
-                  placeholder="e.g. HOLIDAY BULK ORDER - SEA USA"
                   onChange={(e) => handleChange("other_reference", e.target.value)}
                 />
               </Field>
@@ -168,7 +179,6 @@ export function PackingExportDetailsForm({
                   <Textarea
                     rows={3}
                     value={form.other_consignee ?? ""}
-                    placeholder={"L&J Transportation\nATTN: Stephanie Witmyer\n190 Yarnell Road\nPottstown, PA 19465\nPhone Number 484-644-3009"}
                     onChange={(e) => handleChange("other_consignee", e.target.value)}
                     className="text-xs font-mono"
                   />
@@ -178,16 +188,12 @@ export function PackingExportDetailsForm({
                 <Field label="Country of Final Destination">
                   <Input
                     value={form.final_destination_country ?? ""}
-                    placeholder="e.g. USA"
-                    onChange={(e) =>
-                      handleChange("final_destination_country", e.target.value)
-                    }
+                    onChange={(e) => handleChange("final_destination_country", e.target.value)}
                   />
                 </Field>
                 <Field label="Final Destination">
                   <Input
                     value={form.final_destination ?? ""}
-                    placeholder="e.g. Pottstown, PA"
                     onChange={(e) => handleChange("final_destination", e.target.value)}
                   />
                 </Field>
@@ -196,14 +202,12 @@ export function PackingExportDetailsForm({
                 <Field label="Place of Receipt">
                   <Input
                     value={form.place_of_receipt ?? ""}
-                    placeholder="e.g. ICD DADRI"
                     onChange={(e) => handleChange("place_of_receipt", e.target.value)}
                   />
                 </Field>
                 <Field label="Vessel / Flight No">
                   <Input
                     value={form.vessel_flight_no ?? ""}
-                    placeholder="e.g. BY SEA"
                     onChange={(e) => handleChange("vessel_flight_no", e.target.value)}
                   />
                 </Field>
@@ -220,28 +224,24 @@ export function PackingExportDetailsForm({
               <Field label="Port of Loading">
                 <Input
                   value={form.port_of_loading ?? ""}
-                  placeholder="e.g. ICD DADRI"
                   onChange={(e) => handleChange("port_of_loading", e.target.value)}
                 />
               </Field>
               <Field label="Port of Discharge">
                 <Input
                   value={form.port_of_discharge ?? ""}
-                  placeholder="e.g. NEWYORK"
                   onChange={(e) => handleChange("port_of_discharge", e.target.value)}
                 />
               </Field>
               <Field label="Shipping Line">
                 <Input
                   value={form.shipping_line ?? ""}
-                  placeholder="e.g. MAERSK / MSC"
                   onChange={(e) => handleChange("shipping_line", e.target.value)}
                 />
               </Field>
               <Field label="Container No">
                 <Input
                   value={form.container_no ?? ""}
-                  placeholder="e.g. MSKU1234567"
                   onChange={(e) => handleChange("container_no", e.target.value)}
                 />
               </Field>

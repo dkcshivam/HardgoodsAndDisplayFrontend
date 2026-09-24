@@ -230,6 +230,8 @@ export interface ExportDetails {
   invoice_number?: string;
   invoice_date?: string;
   po_number?: string;
+  lc_number?: string;
+  lc_date?: string;
   lc_number_date?: string;
   other_reference?: string;
   other_consignee?: string;
