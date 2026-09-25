@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, FileSpreadsheet, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
@@ -128,12 +129,9 @@ export function PackingExportDetailsForm({
                 />
               </Field>
               <Field label="Invoice Date">
-                <Input
-                  type="date"
+                <DateInput
                   value={form.invoice_date ?? ""}
-                  onChange={(e) => handleChange("invoice_date", e.target.value)}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  className="cursor-pointer"
+                  onChange={(value) => handleChange("invoice_date", value)}
                 />
               </Field>
               <Field label="P.O. No.">
@@ -149,12 +147,9 @@ export function PackingExportDetailsForm({
                 />
               </Field>
               <Field label="LC Date">
-                <Input
-                  type="date"
+                <DateInput
                   value={form.lc_date ?? ""}
-                  onChange={(e) => handleChange("lc_date", e.target.value)}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  className="cursor-pointer"
+                  onChange={(value) => handleChange("lc_date", value)}
                 />
               </Field>
               <Field label="Other Reference">
