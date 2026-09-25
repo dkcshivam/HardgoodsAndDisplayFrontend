@@ -306,13 +306,11 @@ export function TemplateDialog({
                 What goes in the box
               </span>
               <div className="flex items-center gap-3">
-                {candidateRows.length > 6 && (
-                  <SearchInput
-                    value={pieceSearch}
-                    onChange={setPieceSearch}
-                    placeholder="Search pieces…"
-                  />
-                )}
+                <SearchInput
+                  value={pieceSearch}
+                  onChange={setPieceSearch}
+                  placeholder="Search pieces…"
+                />
                 {fits !== null && filled.length > 0 && typingRow === null && (
                   <span
                     className={cn(
