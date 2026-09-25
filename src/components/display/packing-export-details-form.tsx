@@ -66,10 +66,10 @@ export function PackingExportDetailsForm({
     onSave(form, {
       onSuccess: () => {
         setIsDirty(false);
-        toast.success("Packing list details saved successfully");
+        toast.success("Invoice & packing list details saved");
       },
       onError: () => {
-        toast.error("Failed to save packing list details");
+        toast.error("Failed to save invoice & packing list details");
       },
     });
   }
@@ -81,10 +81,10 @@ export function PackingExportDetailsForm({
           <FileSpreadsheet className="size-4 text-primary" />
           <div>
             <CardTitle className="text-sm font-semibold tracking-tight">
-              Packing List Header Details
+              Invoice & Packing List Header Details
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Fill in the export & shipping details that appear in the downloaded Excel packing list.
+              Fill in the export & shipping details that appear in the downloaded Excel invoice and packing list.
             </p>
           </div>
         </div>
