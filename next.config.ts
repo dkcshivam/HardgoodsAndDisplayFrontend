@@ -8,10 +8,10 @@ const devOrigins =
     .map((origin) => origin.trim())
     .filter(Boolean) ?? [];
 
-// Set only when tunnelling. The browser then calls /api on this app and Next
-// forwards it to the API, so everything stays on one origin — no CORS, and no
-// tunnel hostname to add to the API's ALLOWED_HOSTS. Unset in normal dev,
-// where the browser calls the API's published port itself.
+// Set when tunnelling and in production. The browser then calls /api on this
+// app and Next forwards it to the API, so everything stays on one origin — no
+// CORS, and no tunnel hostname to add to the API's ALLOWED_HOSTS. Unset in
+// normal dev, where the browser calls the API's published port itself.
 const apiProxy = process.env.API_PROXY_TARGET?.replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
     skipTrailingSlashRedirect: true,
     rewrites: async () => [
       { source: "/api/:path*", destination: `${apiProxy}/api/:path*/` },
+      // Media are real files, so no trailing slash goes back on these.
+      { source: "/media/:path*", destination: `${apiProxy}/media/:path*` },
     ],
   }),
 };

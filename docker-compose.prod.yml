@@ -1,0 +1,28 @@
+# Production: the compiled app (next build), not the dev server. The browser
+# only ever talks to this; /api and /media are forwarded to the API over its
+# Docker network, so start the backend's production compose first.
+# DEPLOY.md in the backend repo covers both.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+name: dkc-packing-frontend
+
+services:
+  frontend:
+    build:
+      context: .
+      target: prod
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        API_PROXY_TARGET: http://backend:8000
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - default
+      - api
+
+networks:
+  api:
+    external: true
+    name: ${BACKEND_NETWORK:-dkc-packing-backend_default}
