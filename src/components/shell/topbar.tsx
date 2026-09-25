@@ -14,16 +14,24 @@ const LABELS: Record<string, string> = {
   new: "New",
 };
 
+// Stops on the trail with no page of their own — linked, they would 404. An
+// order is reached through its packing or edit screen, never on its own.
+const NOT_PAGES = [/^\/display$/, /^\/(display\/)?orders\/\d+$/];
+
 /** Derives the trail from the URL, so a new route needs no registration. */
 function useCrumbs() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
 
-  return segments.map((segment, index) => ({
-    href: "/" + segments.slice(0, index + 1).join("/"),
-    label: LABELS[segment] ?? (/^\d+$/.test(segment) ? `#${segment}` : segment),
-    last: index === segments.length - 1,
-  }));
+  return segments.map((segment, index) => {
+    const href = "/" + segments.slice(0, index + 1).join("/");
+    return {
+      href,
+      label: LABELS[segment] ?? (/^\d+$/.test(segment) ? `#${segment}` : segment),
+      last: index === segments.length - 1,
+      linked: !NOT_PAGES.some((pattern) => pattern.test(href)),
+    };
+  });
 }
 
 export function Topbar() {
@@ -39,6 +47,8 @@ export function Topbar() {
             )}
             {crumb.last ? (
               <span className="font-medium capitalize">{crumb.label}</span>
+            ) : !crumb.linked ? (
+              <span className="capitalize text-muted-foreground">{crumb.label}</span>
             ) : (
               <Link
                 href={crumb.href}
