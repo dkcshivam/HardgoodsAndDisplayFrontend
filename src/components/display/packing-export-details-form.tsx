@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronUp, FileSpreadsheet, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,14 +48,15 @@ export function PackingExportDetailsForm({
 
   const [isDirty, setIsDirty] = useState(false);
 
-  useEffect(() => {
+  // Take in what the server saved whenever it changes, during render rather
+  // than in an effect, so the form never paints one frame of stale values.
+  const [synced, setSynced] = useState(order.export_details);
+  if (order.export_details !== synced) {
+    setSynced(order.export_details);
     if (order.export_details) {
-      setForm((prev) => ({
-        ...prev,
-        ...order.export_details,
-      }));
+      setForm((prev) => ({ ...prev, ...order.export_details }));
     }
-  }, [order.export_details]);
+  }
 
   function handleChange(field: keyof ExportDetails, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
