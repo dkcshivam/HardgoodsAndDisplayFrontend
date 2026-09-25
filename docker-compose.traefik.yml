@@ -1,0 +1,29 @@
+# On a server where Traefik already owns ports 80 and 443 (the EC2 host), in
+# place of the caddy profile. Traefik routes SITE_ADDRESS to the app and
+# fetches its certificate. The TRAEFIK_ values are read off the running
+# Traefik; DEPLOY.md in the backend repo shows how.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.traefik.yml up -d --build
+
+services:
+  frontend:
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:?Set TRAEFIK_NETWORK in .env}
+      traefik.http.routers.dkc-packing-web.rule: "Host(`${SITE_ADDRESS:?Set SITE_ADDRESS in .env}`)"
+      traefik.http.routers.dkc-packing-web.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.dkc-packing-web.tls: "true"
+      traefik.http.routers.dkc-packing-web.tls.certresolver: ${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      traefik.http.services.dkc-packing-web.loadbalancer.server.port: "3000"
+      # Plain http gets sent to https, whether or not Traefik does so globally.
+      traefik.http.routers.dkc-packing-web-http.rule: "Host(`${SITE_ADDRESS}`)"
+      traefik.http.routers.dkc-packing-web-http.entrypoints: ${TRAEFIK_HTTP_ENTRYPOINT:-web}
+      traefik.http.routers.dkc-packing-web-http.middlewares: dkc-packing-web-https
+      traefik.http.middlewares.dkc-packing-web-https.redirectscheme.scheme: https
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK}
