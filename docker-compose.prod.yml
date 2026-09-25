@@ -9,6 +9,8 @@ name: dkc-packing-frontend
 
 services:
   frontend:
+    # Named apart from the dev image, so neither setup can start the other's.
+    image: dkc-packing-frontend:prod
     build:
       context: .
       target: prod
