@@ -23,10 +23,9 @@ const nextConfig: NextConfig = {
     // which redirects forever. Every endpoint here ends in one, so it is put
     // back on the way out instead.
     skipTrailingSlashRedirect: true,
+    // Photos need no rule: the API hands back signed S3 links.
     rewrites: async () => [
       { source: "/api/:path*", destination: `${apiProxy}/api/:path*/` },
-      // Media are real files, so no trailing slash goes back on these.
-      { source: "/media/:path*", destination: `${apiProxy}/media/:path*` },
     ],
   }),
 };

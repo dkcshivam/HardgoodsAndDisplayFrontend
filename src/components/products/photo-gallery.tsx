@@ -124,7 +124,7 @@ function Tile({
         note && "border-dashed",
       )}
     >
-      {/* Uploads come from the API host and blob: URLs; next/image would
+      {/* Uploads come from the S3 bucket and blob: URLs; next/image would
           need every one of those hosts declared up front. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt="" className="size-full object-cover" />

@@ -54,6 +54,7 @@ grant over HTTPS or on `localhost`. Reaching the dev server by LAN IP from a
 phone will show the "no camera" message; the file picker still works, and on a
 phone that offers the camera anyway.
 
-**Photo URLs** come back absolute from Django (`http://localhost:8000/media/...`).
+**Photo URLs** come back as signed links to the private S3 bucket, even in
+development, and stop working after a day — reload a page left open longer.
 They are plain `<img>` tags rather than `next/image`, so no host has to be
-declared up front when the media store moves.
+declared up front.
