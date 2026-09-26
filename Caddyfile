@@ -1,8 +1,0 @@
-# HTTPS in front of the app. Caddy fetches and renews the certificate for
-# SITE_ADDRESS by itself, so the domain's DNS must already point at this
-# server, with ports 80 and 443 open. See docker-compose.prod.yml.
-
-{$SITE_ADDRESS} {
-	encode zstd gzip
-	reverse_proxy frontend:3000
-}

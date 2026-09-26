@@ -1,10 +1,7 @@
-# Production: the compiled app (next build), not the dev server. The browser
-# only ever talks to this; /api and /media are forwarded to the API over its
-# Docker network, so start the backend's production compose first.
-# DEPLOY.md in the backend repo covers both.
-#
-#   docker compose -f docker-compose.prod.yml up -d --build
-#   SITE_ADDRESS=packing.example.com docker compose -f docker-compose.prod.yml --profile https up -d --build
+# Production, as Coolify deploys it: the compiled app (next build), not the
+# dev server. The browser only ever talks to this; /api is forwarded to the
+# backend. Restarts, the domain and HTTPS are Coolify's. DEPLOY.md in the
+# backend repo covers both.
 
 name: dkc-packing-frontend
 
@@ -17,41 +14,9 @@ services:
       target: prod
       args:
         NEXT_PUBLIC_API_URL: /api
-        API_PROXY_TARGET: http://backend:8000
-    restart: unless-stopped
-    ports:
-      # Loopback only: the outside world comes in over HTTPS, through Caddy
-      # below or a tunnel or proxy already on the server.
-      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
-    networks:
-      - default
-      - api
-
-  # HTTPS with a certificate Caddy fetches and renews itself. Opt in with
-  # --profile https; leave it off where the server already answers on 80/443.
-  caddy:
-    image: caddy:2-alpine
-    profiles: ["https"]
-    restart: unless-stopped
-    environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:-}
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-      - "${HTTPS_PORT:-443}:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      # The certificate lives here; losing it means asking for a new one.
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - frontend
-
-networks:
-  api:
-    external: true
-    name: ${BACKEND_NETWORK:-dkc-packing-backend_default}
-
-volumes:
-  caddy_data:
-  caddy_config:
+        # The backend's https address. Compiled into the routing rules, so
+        # changing it needs a redeploy, not a restart.
+        API_PROXY_TARGET: ${API_PROXY_TARGET:?Set API_PROXY_TARGET in .env}
+    # No published port: Coolify's proxy reaches it over Docker's network.
+    expose:
+      - "3000"
