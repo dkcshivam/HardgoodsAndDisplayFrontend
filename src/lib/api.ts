@@ -134,8 +134,8 @@ async function rotate(stale: string | null): Promise<string | null> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh: tokens.refresh }),
   });
-  if (response.status >= 400 && response.status < 500) return null;
-  // A server fault is no reason to sign anybody out.
+  if (response.status === 400 || response.status === 401) return null;
+  // Throttled or faulty is no reason to sign anybody out.
   if (!response.ok) throw await failure(response, "POST", "/auth/refresh/");
 
   const fresh = (await response.json()) as Partial<Tokens>;
