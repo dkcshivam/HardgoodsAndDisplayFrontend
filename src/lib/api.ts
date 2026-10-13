@@ -105,6 +105,8 @@ function endSession() {
 }
 
 let refreshing: Promise<string | null> | null = null;
+// A sign-in after a password change, which revoked every token held.
+let renewing: Promise<string | null> | null = null;
 
 /**
  * The refresh token rotates and a used one is rejected, so concurrent 401s
@@ -112,6 +114,7 @@ let refreshing: Promise<string | null> | null = null;
  * lock covers the others.
  */
 function refreshAccess(stale: string | null): Promise<string | null> {
+  if (renewing) return renewing;
   refreshing ??= withLock(() => rotate(stale)).finally(() => {
     refreshing = null;
   });
@@ -137,7 +140,12 @@ async function rotate(stale: string | null): Promise<string | null> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh: tokens.refresh }),
   });
-  if (response.status === 400 || response.status === 401) return null;
+  if (response.status === 400 || response.status === 401) {
+    // Replaced while this one was failing: a renewal, or another tab.
+    const now = readTokens();
+    if (now && now.refresh !== tokens.refresh) return now.access;
+    return renewing;
+  }
   // Throttled or faulty is no reason to sign anybody out.
   if (!response.ok) throw await failure(response, "POST", "/auth/refresh/");
 
@@ -247,20 +255,39 @@ export const api = {
   download,
 };
 
+async function login(username: string, password: string): Promise<LoginResponse> {
+  const result = await request<LoginResponse>("POST", "/auth/login/", {
+    username,
+    password,
+  });
+  writeTokens({ access: result.access, refresh: result.refresh });
+  return result;
+}
+
 /** Everything that touches the tokens, so no component has to. */
 export const session = {
   /** Tokens are stored — not that they still work. */
   active: () => readTokens() !== null,
   subscribe,
   goToLogin,
+  login,
 
-  async login(username: string, password: string): Promise<LoginResponse> {
-    const result = await request<LoginResponse>("POST", "/auth/login/", {
-      username,
-      password,
-    });
-    writeTokens({ access: result.access, refresh: result.refresh });
-    return result;
+  /**
+   * Call straight after a password change, which revokes every token the
+   * user holds. Any 401 meanwhile waits for this rather than a refresh that
+   * can only fail.
+   */
+  renew(username: string, password: string): Promise<LoginResponse> {
+    const pending = login(username, password);
+    renewing = pending
+      .then(
+        (result) => result.access,
+        () => null,
+      )
+      .finally(() => {
+        renewing = null;
+      });
+    return pending;
   },
 
   /** Signed out here whatever the server answers, then off to the login page. */
@@ -277,7 +304,7 @@ export const session = {
     }
   },
 
-  /** Signed out without asking the server, which has already revoked the tokens. */
+  /** Signed out without asking the server, which revoked the tokens already. */
   drop(reason: string) {
     writeTokens(null);
     goToLogin(undefined, reason);

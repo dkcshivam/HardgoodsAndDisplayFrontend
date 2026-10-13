@@ -82,9 +82,10 @@ export function UserDialog({
       },
       onError: (error) => {
         // Anything no field below can show — a guard's `detail`, say.
+        const onScreen = user ? FIELDS : [...FIELDS, "password"];
         const shown =
           error instanceof ApiError &&
-          [...FIELDS, "password"].some((key) => error.fieldError(key));
+          onScreen.some((key) => error.fieldError(key));
         if (!shown) {
           toast.error(error instanceof ApiError ? error.summary : "Could not save");
         }

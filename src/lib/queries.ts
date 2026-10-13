@@ -430,23 +430,32 @@ export function useLogout() {
 }
 
 /**
- * A new password revokes every token the user holds, this tab's included, so
- * success ends the session here rather than at the next failed refresh.
+ * A new password revokes every token its user holds, this tab's included.
+ * Signing straight back in keeps them where they were; should that fail, the
+ * login page tells them why they landed there.
  */
-function useSignOutForPassword() {
+function useStaySignedIn() {
   const client = useQueryClient();
-  return () => {
-    client.clear();
-    session.drop("password");
+  return async (password: string) => {
+    const me = client.getQueryData<User>(ME);
+    try {
+      if (!me) throw new Error("No signed-in user to renew");
+      const { user } = await session.renew(me.username, password);
+      client.setQueryData(ME, user);
+    } catch {
+      client.clear();
+      session.drop("password");
+    }
   };
 }
 
 export function useChangePassword() {
-  const signOut = useSignOutForPassword();
+  const staySignedIn = useStaySignedIn();
   return useMutation({
-    mutationFn: (body: { current_password: string; new_password: string }) =>
-      api.post<void>("/auth/password/", body),
-    onSuccess: signOut,
+    mutationFn: async (body: { current_password: string; new_password: string }) => {
+      await api.post<void>("/auth/password/", body);
+      await staySignedIn(body.new_password);
+    },
   });
 }
 
@@ -455,17 +464,21 @@ export const useUsers = (
   options?: Partial<UseQueryOptions<Paginated<User>>>,
 ) => useList<User>("users", filters, options);
 
-/** PATCH on edit, so only what changed is sent — the self-edit guards key on it. */
+/** PATCH on edit, sending only what changed. */
 export function useSaveUser() {
   const client = useQueryClient();
-  const signOut = useSignOutForPassword();
+  const staySignedIn = useStaySignedIn();
   return useMutation({
-    mutationFn: ({ id, ...fields }: Partial<UserWrite> & { id?: number }) =>
-      id
-        ? api.patch<User>(`/users/${id}/`, fields)
-        : api.post<User>("/users/", fields),
-    onSuccess: (_saved, { id, password }) => {
-      if (password && id === client.getQueryData<User>(ME)?.id) return signOut();
+    mutationFn: async ({ id, ...fields }: Partial<UserWrite> & { id?: number }) => {
+      if (!id) return api.post<User>("/users/", fields);
+      const saved = await api.patch<User>(`/users/${id}/`, fields);
+      // An admin who resets their own password revokes their own tokens.
+      if (fields.password && id === client.getQueryData<User>(ME)?.id) {
+        await staySignedIn(fields.password);
+      }
+      return saved;
+    },
+    onSuccess: () => {
       client.invalidateQueries({ queryKey: ["users"] });
       client.invalidateQueries({ queryKey: ME });
     },
