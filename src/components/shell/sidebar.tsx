@@ -8,6 +8,7 @@ import {
   Building2,
   ChevronDown,
   ClipboardList,
+  History,
   Package,
   Store,
   Tags,
@@ -50,6 +51,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/merchants", label: "Merchants", icon: Building2 },
       { href: "/stores", label: "Stores", icon: Store },
       { href: "/users", label: "Users", icon: Users, adminOnly: true },
+      { href: "/activity", label: "Activity", icon: History, adminOnly: true },
     ],
   },
 ];

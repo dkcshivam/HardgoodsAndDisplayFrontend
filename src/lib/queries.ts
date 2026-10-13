@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { api, query, session, type Paginated } from "@/lib/api";
 import type {
+  AuditEvent,
   Category,
   DisplayCarton,
   DisplayOrder,
@@ -453,3 +454,9 @@ export function useSaveUser() {
     },
   });
 }
+
+/** Never served from cache on opening: the point is what just happened. */
+export const useAuditEvents = (
+  filters?: Filters,
+  options?: Partial<UseQueryOptions<Paginated<AuditEvent>>>,
+) => useList<AuditEvent>("audit-events", filters, { staleTime: 0, ...options });

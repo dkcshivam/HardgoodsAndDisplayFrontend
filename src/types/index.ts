@@ -653,3 +653,46 @@ export interface LoginResponse {
   refresh: string;
   user: User;
 }
+
+/* ── Audit trail ──────────────────────────────────────────────────── */
+
+export type AuditAction =
+  | "create"
+  | "update"
+  | "delete"
+  | "advance_status"
+  | "save_packing"
+  | "auto_pack"
+  | "add_step"
+  | "update_step"
+  | "delete_step"
+  | "replicate"
+  | "login"
+  | "logout";
+
+/** JSON-safe: decimals and dates arrive as strings. */
+export type AuditValue =
+  | string
+  | number
+  | boolean
+  | null
+  | AuditValue[]
+  | { [key: string]: AuditValue };
+
+/** Append-only. Names are snapshots, so a renamed record reads as it was then. */
+export interface AuditEvent {
+  id: number;
+  created_at: string;
+  /** Null once the user record is gone; `actor_name` survives it. */
+  actor: number | null;
+  actor_name: string;
+  action: AuditAction;
+  action_label: string;
+  /** `app_label.model`, e.g. `orders.order`. */
+  target_type: string;
+  target_label: string;
+  target_id: string;
+  target_repr: string;
+  /** `{field: [before, after]}` — before is null on create, after on delete. */
+  changes: Record<string, [AuditValue, AuditValue]>;
+}
