@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ImageOff, Plus } from "lucide-react";
+import { ImageOff, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm";
 import { Select } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/search-input";
 import {
@@ -18,13 +19,19 @@ import {
   TD,
   EmptyRow,
 } from "@/components/ui/table";
-import { useCategories, useProducts } from "@/lib/queries";
+import { useToast } from "@/components/ui/toast";
+import { ApiError } from "@/lib/api";
+import { useCategories, useProducts, useRemove } from "@/lib/queries";
 import { useSort } from "@/lib/sort";
+import type { ProductListItem } from "@/types";
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("active");
+  const [deleting, setDeleting] = useState<ProductListItem | null>(null);
+  const remove = useRemove("products");
+  const toast = useToast();
 
   // The whole list, because sorting a page of it would order the wrong rows.
   const { data, isLoading, isError } = useProducts({
@@ -108,17 +115,18 @@ export default function ProductsPage() {
                 <SortTH column="packs_as" sort={sort} onSort={toggle}>
                   Packs as
                 </SortTH>
+                <TH />
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={7}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={6}>
+                <EmptyRow colSpan={7}>
                   <span className="text-destructive">Could not load products.</span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={6}>
+                <EmptyRow colSpan={7}>
                   Nothing matches. Try clearing the filters.
                 </EmptyRow>
               )}
@@ -158,6 +166,16 @@ export default function ProductsPage() {
                       <Badge>{row.pack_per_box} per box</Badge>
                     )}
                   </TD>
+                  <TD className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive-subtle"
+                      onClick={() => setDeleting(row)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </TD>
                 </TR>
               ))}
             </tbody>
@@ -170,6 +188,31 @@ export default function ProductsPage() {
           </p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(next) => !next && setDeleting(null)}
+        title="Delete this product?"
+        message={`Delete ${deleting?.style_no}? Its parts and photos go with it. A product already on an order is kept — you will be told which order holds it.`}
+        busy={remove.isPending}
+        onConfirm={() =>
+          deleting &&
+          remove.mutate(deleting.id, {
+            onSuccess: () => {
+              toast.success(`${deleting.style_no} deleted`);
+              setDeleting(null);
+            },
+            onError: (error) => {
+              setDeleting(null);
+              toast.error(
+                error instanceof ApiError
+                  ? error.detail
+                  : "Could not delete this product",
+              );
+            },
+          })
+        }
+      />
     </main>
   );
 }

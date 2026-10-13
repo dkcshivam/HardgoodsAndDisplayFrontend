@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ImageOff, Plus } from "lucide-react";
+import { ImageOff, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm";
 import { Select } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/search-input";
 import {
@@ -19,18 +20,24 @@ import {
   TD,
   EmptyRow,
 } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { ImportGapPanel, type GapItem } from "@/components/display/import-gap-panel";
+import { ApiError } from "@/lib/api";
 import { useImportGap } from "@/lib/import-gap";
 import { find, index, sameName } from "@/lib/order-sheet";
-import { useCategories, useDisplayProducts } from "@/lib/queries";
+import { useCategories, useDisplayProducts, useRemove } from "@/lib/queries";
 import { format } from "@/lib/calc";
 import { mainImage } from "@/lib/images";
 import { useSort } from "@/lib/sort";
+import type { DisplayProduct } from "@/types";
 
 export default function DisplayProductsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
+  const [deleting, setDeleting] = useState<DisplayProduct | null>(null);
+  const remove = useRemove("display-products");
+  const toast = useToast();
 
   // The whole list, because sorting a page of it would order the wrong rows.
   const { data, isLoading, isError } = useDisplayProducts({
@@ -171,19 +178,20 @@ export default function DisplayProductsPage() {
                 <SortTH column="status" sort={sort} onSort={toggle}>
                   Status
                 </SortTH>
+                <TH />
               </tr>
             </THead>
             <tbody>
-              {isLoading && <EmptyRow colSpan={10}>Loading…</EmptyRow>}
+              {isLoading && <EmptyRow colSpan={11}>Loading…</EmptyRow>}
               {isError && (
-                <EmptyRow colSpan={10}>
+                <EmptyRow colSpan={11}>
                   <span className="text-destructive">
                     Could not load display products.
                   </span>
                 </EmptyRow>
               )}
               {!isLoading && rows.length === 0 && (
-                <EmptyRow colSpan={10}>
+                <EmptyRow colSpan={11}>
                   No display products yet. Create one to start building
                   templates.
                 </EmptyRow>
@@ -253,6 +261,16 @@ export default function DisplayProductsPage() {
                       {product.status}
                     </Badge>
                   </TD>
+                  <TD className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive-subtle"
+                      onClick={() => setDeleting(product)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </TD>
                 </TR>
                 );
               })}
@@ -279,6 +297,31 @@ export default function DisplayProductsPage() {
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(next) => !next && setDeleting(null)}
+        title="Delete this product?"
+        message={`Delete ${deleting?.style_no}? Its parts and photos go with it. A product already on an order or in a template is kept — you will be told which holds it.`}
+        busy={remove.isPending}
+        onConfirm={() =>
+          deleting &&
+          remove.mutate(deleting.id, {
+            onSuccess: () => {
+              toast.success(`${deleting.style_no} deleted`);
+              setDeleting(null);
+            },
+            onError: (error) => {
+              setDeleting(null);
+              toast.error(
+                error instanceof ApiError
+                  ? error.detail
+                  : "Could not delete this product",
+              );
+            },
+          })
+        }
+      />
     </main>
   );
 }
