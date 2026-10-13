@@ -86,13 +86,16 @@ function subscribe(listener: () => void) {
 
 let leaving = false;
 
-/** A full page load, so nothing of the previous session survives in memory. */
-function goToLogin(next?: string) {
+/**
+ * A full page load, so nothing of the previous session survives in memory.
+ * `reason` lets the login page say why the user is there.
+ */
+function goToLogin(next?: string, reason?: string) {
   if (leaving || typeof window === "undefined") return;
   if (window.location.pathname === "/login") return;
   leaving = true;
   window.location.replace(
-    next && next !== "/" ? `/login?next=${encodeURIComponent(next)}` : "/login",
+    `/login${query({ next: next === "/" ? undefined : next, reason })}`,
   );
 }
 
@@ -272,6 +275,12 @@ export const session = {
       // In the same tick, before the guard can react and send a `next` along.
       goToLogin();
     }
+  },
+
+  /** Signed out without asking the server, which has already revoked the tokens. */
+  drop(reason: string) {
+    writeTokens(null);
+    goToLogin(undefined, reason);
   },
 };
 

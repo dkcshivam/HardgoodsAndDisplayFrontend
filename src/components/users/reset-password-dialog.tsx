@@ -36,7 +36,7 @@ export function ResetPasswordDialog({
     <DialogRoot open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         title="Reset password"
-        description={`A new password for ${user.full_name} (${user.username}).`}
+        description={`A new password for ${user.full_name} (${user.username}). Any session they have open ends.`}
         className="max-w-md"
       >
         <form

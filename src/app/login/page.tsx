@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, Boxes } from "lucide-react";
+import { AlertCircle, Boxes, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,12 +28,17 @@ function reason(error: Error): string {
   return error.detail;
 }
 
+const NOTICES: Record<string, string> = {
+  password: "Password changed. Sign in with the new one.",
+};
+
 function LoginForm() {
   const params = useSearchParams();
   const router = useRouter();
   const login = useLogin();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const notice = NOTICES[params.get("reason") ?? ""];
 
   return (
     <form
@@ -46,7 +51,7 @@ function LoginForm() {
         );
       }}
     >
-      {login.error && (
+      {login.error ? (
         <div
           role="alert"
           className="flex items-start gap-2 rounded-md border border-destructive-border bg-destructive-subtle px-3 py-2 text-xs text-destructive"
@@ -54,7 +59,15 @@ function LoginForm() {
           <AlertCircle className="mt-px size-3.5 shrink-0" />
           <span className="leading-snug">{reason(login.error)}</span>
         </div>
-      )}
+      ) : notice ? (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-md bg-success-subtle px-3 py-2 text-xs text-success"
+        >
+          <CheckCircle2 className="mt-px size-3.5 shrink-0" />
+          <span className="leading-snug">{notice}</span>
+        </div>
+      ) : null}
 
       <Field label="Username" htmlFor="username">
         <Input

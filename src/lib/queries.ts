@@ -429,11 +429,26 @@ export function useLogout() {
   });
 }
 
-export const useChangePassword = () =>
-  useMutation({
+/**
+ * A new password revokes every token the user holds, this tab's included, so
+ * success ends the session here rather than at the next failed refresh.
+ */
+function useSignOutForPassword() {
+  const client = useQueryClient();
+  return () => {
+    client.clear();
+    session.drop("password");
+  };
+}
+
+export function useChangePassword() {
+  const signOut = useSignOutForPassword();
+  return useMutation({
     mutationFn: (body: { current_password: string; new_password: string }) =>
       api.post<void>("/auth/password/", body),
+    onSuccess: signOut,
   });
+}
 
 export const useUsers = (
   filters?: Filters,
@@ -443,12 +458,14 @@ export const useUsers = (
 /** PATCH on edit, so only what changed is sent — the self-edit guards key on it. */
 export function useSaveUser() {
   const client = useQueryClient();
+  const signOut = useSignOutForPassword();
   return useMutation({
     mutationFn: ({ id, ...fields }: Partial<UserWrite> & { id?: number }) =>
       id
         ? api.patch<User>(`/users/${id}/`, fields)
         : api.post<User>("/users/", fields),
-    onSuccess: () => {
+    onSuccess: (_saved, { id, password }) => {
+      if (password && id === client.getQueryData<User>(ME)?.id) return signOut();
       client.invalidateQueries({ queryKey: ["users"] });
       client.invalidateQueries({ queryKey: ME });
     },

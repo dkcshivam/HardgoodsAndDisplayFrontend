@@ -27,7 +27,11 @@ export function PasswordDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <DialogRoot open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent title="Change password" className="max-w-md">
+      <DialogContent
+        title="Change password"
+        description="This signs you out everywhere, here included. Sign in again with the new password."
+        className="max-w-md"
+      >
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -35,13 +39,10 @@ export function PasswordDialog({ onClose }: { onClose: () => void }) {
               setMismatch(true);
               return;
             }
+            // Success leaves for the login page; see useChangePassword.
             change.mutate(
               { current_password: current, new_password: next },
               {
-                onSuccess: () => {
-                  toast.success("Password changed");
-                  onClose();
-                },
                 onError: (error) => {
                   const known =
                     error instanceof ApiError &&
@@ -122,7 +123,11 @@ export function PasswordDialog({ onClose }: { onClose: () => void }) {
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" size="sm" disabled={change.isPending}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={change.isPending || change.isSuccess}
+            >
               {change.isPending ? "Saving…" : "Change password"}
             </Button>
           </DialogFooter>
