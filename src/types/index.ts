@@ -622,3 +622,28 @@ export interface InvoiceDocument {
   signatory: string;
   for_exporter: string;
 }
+
+/* ── Accounts ─────────────────────────────────────────────────────── */
+
+export type Role = "admin" | "senior_merchant" | "merchant";
+
+export interface User {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  /** Falls back to the username when both names are blank. */
+  full_name: string;
+  email: string;
+  role: Role;
+  role_label: string;
+  is_active: boolean;
+  last_login: string | null;
+  date_joined: string;
+}
+
+export interface LoginResponse {
+  access: string;
+  refresh: string;
+  user: User;
+}
