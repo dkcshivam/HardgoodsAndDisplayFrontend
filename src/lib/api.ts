@@ -249,7 +249,7 @@ export const session = {
     return result;
   },
 
-  /** Signed out here whatever the server answers. */
+  /** Signed out here whatever the server answers, then off to the login page. */
   async logout(): Promise<void> {
     try {
       // Read at send time: after a refresh the old token is already dead.
@@ -258,6 +258,8 @@ export const session = {
       }));
     } finally {
       writeTokens(null);
+      // In the same tick, before the guard can react and send a `next` along.
+      goToLogin();
     }
   },
 };

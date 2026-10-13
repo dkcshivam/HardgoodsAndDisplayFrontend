@@ -24,6 +24,7 @@ import type {
   ProductImage,
   ProductListItem,
   Store,
+  User,
 } from "@/types";
 
 type Filters = Record<string, string | number | boolean | undefined>;
@@ -395,6 +396,16 @@ export const useInvoiceDocument = (resource: DocResource, orderId: number) =>
 
 const ME = ["auth", "me"];
 
+export const useMe = (options?: Partial<UseQueryOptions<User>>) =>
+  useQuery<User>({
+    queryKey: ME,
+    queryFn: () => api.get<User>("/auth/me/"),
+    staleTime: 5 * 60_000,
+    ...options,
+  });
+
+export const useIsAdmin = () => useMe().data?.role === "admin";
+
 export function useLogin() {
   const client = useQueryClient();
   return useMutation({
@@ -407,3 +418,17 @@ export function useLogin() {
     },
   });
 }
+
+export function useLogout() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => session.logout(),
+    onSettled: () => client.clear(),
+  });
+}
+
+export const useChangePassword = () =>
+  useMutation({
+    mutationFn: (body: { current_password: string; new_password: string }) =>
+      api.post<void>("/auth/password/", body),
+  });

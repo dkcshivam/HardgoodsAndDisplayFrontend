@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsAdmin } from "@/lib/queries";
 
 interface NavItem {
   href: string;
@@ -51,6 +52,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const isAdmin = useIsAdmin();
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
@@ -78,16 +80,18 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border px-4 py-3">
-        <a
-          href="http://localhost:8000/admin/"
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          Django Admin ↗
-        </a>
-      </div>
+      {isAdmin && (
+        <div className="border-t border-sidebar-border px-4 py-3">
+          <a
+            href="http://localhost:8000/admin/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Django Admin ↗
+          </a>
+        </div>
+      )}
     </aside>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { UserMenu } from "@/components/shell/user-menu";
 
 const LABELS: Record<string, string> = {
   products: "Products",
@@ -60,6 +61,9 @@ export function Topbar() {
           </span>
         ))}
       </nav>
+      <div className="ml-auto">
+        <UserMenu />
+      </div>
     </header>
   );
 }
