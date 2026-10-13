@@ -155,9 +155,11 @@ function init(method: string, body: unknown, access: string | null): RequestInit
 /** Retries once after a refresh; a second 401 is a real answer. */
 async function send(method: string, path: string, body?: unknown): Promise<Response> {
   const url = `${BASE_URL}${path}`;
-  const sent = readTokens()?.access ?? null;
+  // A stale token on the login call would be rejected before the password is read.
+  const unsigned = UNSIGNED.includes(path);
+  const sent = unsigned ? null : (readTokens()?.access ?? null);
   const response = await fetch(url, init(method, body, sent));
-  if (response.status !== 401 || UNSIGNED.includes(path)) return response;
+  if (response.status !== 401 || unsigned) return response;
 
   const access = await refreshAccess(sent);
   if (!access) {

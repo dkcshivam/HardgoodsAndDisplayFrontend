@@ -6,7 +6,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-import { api, query, type Paginated } from "@/lib/api";
+import { api, query, session, type Paginated } from "@/lib/api";
 import type {
   Category,
   DisplayCarton,
@@ -390,3 +390,20 @@ export const useInvoiceDocument = (resource: DocResource, orderId: number) =>
     queryKey: [resource, orderId, "invoice-data"],
     queryFn: () => api.get<InvoiceDocument>(`/${resource}/${orderId}/invoice-data/`),
   });
+
+/* ── Accounts ─────────────────────────────────────────────────────── */
+
+const ME = ["auth", "me"];
+
+export function useLogin() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ username, password }: { username: string; password: string }) =>
+      session.login(username, password),
+    // Nothing a previous user loaded may outlive the change of hands.
+    onSuccess: ({ user }) => {
+      client.removeQueries();
+      client.setQueryData(ME, user);
+    },
+  });
+}
