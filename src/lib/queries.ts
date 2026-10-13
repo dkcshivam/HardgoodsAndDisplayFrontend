@@ -25,6 +25,7 @@ import type {
   ProductListItem,
   Store,
   User,
+  UserWrite,
 } from "@/types";
 
 type Filters = Record<string, string | number | boolean | undefined>;
@@ -432,3 +433,23 @@ export const useChangePassword = () =>
     mutationFn: (body: { current_password: string; new_password: string }) =>
       api.post<void>("/auth/password/", body),
   });
+
+export const useUsers = (
+  filters?: Filters,
+  options?: Partial<UseQueryOptions<Paginated<User>>>,
+) => useList<User>("users", filters, options);
+
+/** PATCH on edit, so only what changed is sent — the self-edit guards key on it. */
+export function useSaveUser() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...fields }: Partial<UserWrite> & { id?: number }) =>
+      id
+        ? api.patch<User>(`/users/${id}/`, fields)
+        : api.post<User>("/users/", fields),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["users"] });
+      client.invalidateQueries({ queryKey: ME });
+    },
+  });
+}

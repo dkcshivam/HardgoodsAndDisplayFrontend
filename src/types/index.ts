@@ -642,6 +642,12 @@ export interface User {
   date_joined: string;
 }
 
+/** What `/users/` accepts. `password` is write-only: required on create, a reset on edit. */
+export type UserWrite = Pick<
+  User,
+  "username" | "first_name" | "last_name" | "email" | "role" | "is_active"
+> & { password?: string };
+
 export interface LoginResponse {
   access: string;
   refresh: string;

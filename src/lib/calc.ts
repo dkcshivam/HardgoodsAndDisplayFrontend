@@ -124,6 +124,17 @@ export const format = {
           year: "numeric",
         })
       : "—",
+  /** In the viewer's own time zone. */
+  dateTime: (iso: string | null | undefined) =>
+    iso
+      ? new Date(iso).toLocaleString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "—",
 };
 
 /** 6 chairs that pack 2-per-box = 3 cartons. */

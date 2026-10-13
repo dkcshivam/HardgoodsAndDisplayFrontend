@@ -17,6 +17,7 @@ export function ConfirmDialog({
   confirmLabel = "Delete",
   onConfirm,
   busy,
+  destructive = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -25,6 +26,8 @@ export function ConfirmDialog({
   confirmLabel?: string;
   onConfirm: () => void;
   busy?: boolean;
+  /** Off when the action is harmless, like letting a user back in. */
+  destructive?: boolean;
 }) {
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -39,7 +42,7 @@ export function ConfirmDialog({
             </Button>
           </DialogClose>
           <Button
-            variant="destructive"
+            variant={destructive ? "destructive" : "primary"}
             size="sm"
             onClick={onConfirm}
             disabled={busy}

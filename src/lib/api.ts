@@ -24,6 +24,17 @@ export class ApiError extends Error {
   get detail(): string {
     return this.fieldError("detail") ?? this.message;
   }
+
+  /** The first thing the API said, for when no field on screen can show it. */
+  get summary(): string {
+    if (typeof this.body === "object" && this.body !== null) {
+      for (const key of ["detail", "non_field_errors", ...Object.keys(this.body)]) {
+        const message = this.fieldError(key);
+        if (message) return message;
+      }
+    }
+    return this.message;
+  }
 }
 
 /* ── Tokens ───────────────────────────────────────────────────────── */

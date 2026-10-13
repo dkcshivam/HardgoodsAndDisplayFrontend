@@ -12,6 +12,7 @@ import {
   Store,
   Tags,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsAdmin } from "@/lib/queries";
@@ -21,6 +22,8 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
+  /** Hidden from everybody else; the API refuses them regardless. */
+  adminOnly?: boolean;
 }
 
 const GROUPS: { title: string; items: NavItem[] }[] = [
@@ -46,6 +49,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/categories", label: "Categories", icon: Tags },
       { href: "/merchants", label: "Merchants", icon: Building2 },
       { href: "/stores", label: "Stores", icon: Store },
+      { href: "/users", label: "Users", icon: Users, adminOnly: true },
     ],
   },
 ];
@@ -69,13 +73,15 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {GROUPS.map((group) => (
           <NavGroup key={group.title} title={group.title} pathname={pathname}>
-            {group.items.map((item) => (
-              <NavLink
-                key={item.href}
-                {...item}
-                active={pathname.startsWith(item.href)}
-              />
-            ))}
+            {group.items
+              .filter((item) => isAdmin || !item.adminOnly)
+              .map((item) => (
+                <NavLink
+                  key={item.href}
+                  {...item}
+                  active={pathname.startsWith(item.href)}
+                />
+              ))}
           </NavGroup>
         ))}
       </nav>
