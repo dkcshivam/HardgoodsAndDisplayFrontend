@@ -27,6 +27,7 @@ import { ReconciliationBar } from "@/components/packing/reconciliation-bar";
 import { Gated } from "@/components/packing/gated";
 import { RatesDialog } from "@/components/packing/rates-dialog";
 import type { RateRow } from "@/components/packing/rates-dialog";
+import { HistoryLink } from "@/components/activity/history-link";
 import { useOrder, useOrderAction, usePackingPlan } from "@/lib/queries";
 import { api, ApiError } from "@/lib/api";
 import { cbm, format } from "@/lib/calc";
@@ -227,6 +228,7 @@ export default function PackingPage({
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <HistoryLink type="orders.order" id={orderId} />
               <Button
                 variant="secondary"
                 size="sm"

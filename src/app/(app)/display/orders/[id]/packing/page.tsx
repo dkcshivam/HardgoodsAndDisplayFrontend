@@ -31,6 +31,7 @@ import { Gated } from "@/components/packing/gated";
 import { RatesDialog } from "@/components/packing/rates-dialog";
 import type { RateRow } from "@/components/packing/rates-dialog";
 import { PackingExportDetailsForm } from "@/components/display/packing-export-details-form";
+import { HistoryLink } from "@/components/activity/history-link";
 import {
   useDisplayCartons,
   useDisplayOrder,
@@ -193,6 +194,7 @@ export default function DisplayPackingPage({
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <HistoryLink type="display.displayorder" id={orderId} />
               {order.data.status !== "shipped" && (
                 <Button variant="secondary" size="sm" asChild>
                   <Link href={`/display/orders/${orderId}/edit`}>
