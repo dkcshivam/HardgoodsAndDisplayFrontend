@@ -693,6 +693,9 @@ export interface AuditEvent {
   target_label: string;
   target_id: string;
   target_repr: string;
-  /** `{field: [before, after]}` — before is null on create, after on delete. */
+  /**
+   * `{field: [before, after]}` — before is null on create, after on delete.
+   * A collection (parts, lines, items) is `[rows removed, rows added]` instead.
+   */
   changes: Record<string, [AuditValue, AuditValue]>;
 }
