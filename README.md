@@ -58,3 +58,9 @@ phone that offers the camera anyway.
 development, and stop working after a day — reload a page left open longer.
 They are plain `<img>` tags rather than `next/image`, so no host has to be
 declared up front.
+
+
+
+To take care of 
+- shipping data , may not be present at first 
+- box dimensions , may not be finalized at start can be edited later to finalize
